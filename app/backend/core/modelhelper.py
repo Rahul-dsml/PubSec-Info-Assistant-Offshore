@@ -1,5 +1,5 @@
 import tiktoken
-
+from transformers import LlamaTokenizer
 #Values from https://platform.openai.com/docs/models/gpt-3-5
 
 MODELS_2_TOKEN_LIMITS = {
@@ -9,7 +9,8 @@ MODELS_2_TOKEN_LIMITS = {
     "gpt-3.5-turbo-16k": 16385,
     "gpt-4": 8192,
     "gpt-4-32k": 32768,
-    "gpt-4o": 128000
+    "gpt-4o": 128000,
+    "llama-3.2-1b-preview": 128000
 }
 
 AOAI_2_OAI = {
@@ -43,6 +44,36 @@ def num_tokens_from_messages(message: dict[str, str], model: str) -> int:
     num_tokens = 2  # For "role" and "content" keys
     for key, value in message.items():
         num_tokens += len(encoding.encode(value))
+    return num_tokens
+
+
+def num_tokens_from_messages_llama(message: dict[str, str], model: str) -> int:
+    """
+    Calculate the number of tokens required to encode a message for the LLama model.
+    
+    Args:
+        message (dict): The message to encode, represented as a dictionary.
+        model (str): The name of the model to use for encoding (for LLama 3.2, you would use the appropriate LLama tokenizer).
+    
+    Returns:
+        int: The total number of tokens required to encode the message.
+    
+    Example:
+        message = {'role': 'user', 'content': 'Hello, how are you?'}
+        model = 'llama-3.2'
+        num_tokens_from_messages(message, model)
+        output: 11
+    """
+    # Load the appropriate tokenizer for LLama
+    tokenizer = LlamaTokenizer.from_pretrained(model)
+
+    # Initialize the token count with 2 tokens for the special tokens for "role" and "content"
+    num_tokens = 2  # One for "role" and one for "content" in the dictionary
+    
+    for key, value in message.items():
+        # Encode each content and sum the number of tokens
+        num_tokens += len(tokenizer.encode(value))
+    
     return num_tokens
 
 
