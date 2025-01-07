@@ -1,4 +1,4 @@
-Description,Stock Level,ROP,ROQ,Avg Turnover,Avg Lead Time,Average Price,ABC Analysis,XYZ Analysis,Location
+Description,StockLevel,ROP,ROQ,AvgTurnover,AvgLeadTime,AveragePrice,ABCAnalysis,XYZAnalysis,Location
 Track Fixture APC Tank,65,10,10,9.468324575,2,$163.97 ,C,X,Camp Bastion
 Engine Mount M1 Abrams,54,1,6,6.742598697,10,$170.73 ,C,Y,Camp Pendleton
 Transmission Gear HMMWV,81,9,10,3.729956219,6,$254.67 ,B,X,Fort Bragg

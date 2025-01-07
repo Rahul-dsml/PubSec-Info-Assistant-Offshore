@@ -1,126 +1,148 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
+import sqlite3
+import pandas as pd
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
 
-import base64
-import os
-import glob
-import warnings
-import io
-import tempfile
-from dotenv import load_dotenv
-from PIL import Image
-from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
-from langchain.agents.agent_types import AgentType
-from langchain_openai import AzureChatOpenAI
-from langchain_community.agent_toolkits.load_tools import load_tools
-from azure.identity import ManagedIdentityCredential, AzureAuthorityHosts, DefaultAzureCredential, get_bearer_token_provider
+class CodeGeneratorAgent:
+    def __init__(self, llm):
+        self.llm = llm
 
-warnings.filterwarnings('ignore')
-load_dotenv()
+    def generate_sql_query(self, query, db_info, sample_records):
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """
+                    You are an assistant for generating SQL queries for an SQLite database.
+                    The database schema and details are provided below:
+                    Table name: dataTable
+                    Schema: {db_info}
+                    Sample records: {sample_records}
+                    THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    """,
+                ),
+                ("human", "User Query: {query}"),
+            ]
+        )
 
-OPENAI_API_BASE = os.environ.get("AZURE_OPENAI_ENDPOINT")
-OPENAI_DEPLOYMENT_NAME =  os.getenv("AZURE_OPENAI_CHATGPT_DEPLOYMENT")
+        # Use the LLM to generate SQL query
+        chain = prompt | self.llm
+        response = chain.invoke({"db_info": db_info, 
+                                 "sample_records": sample_records,
+                                 "query": query})
+        return response.content.strip()  # Remove extra whitespace or newlines
 
-if os.environ.get("AZURE_OPENAI_AUTHORITY_HOST") == "AzureUSGovernment":
-    AUTHORITY = AzureAuthorityHosts.AZURE_GOVERNMENT
-else:
-    AUTHORITY = AzureAuthorityHosts.AZURE_PUBLIC_CLOUD
+# Code Executor Agent (SQL Query Executor)
+class CodeExecutorAgent:
+    def __init__(self, db_connection):
+        self.db_connection = db_connection
 
-if os.environ.get("LOCAL_DEBUG") == "true":
-    azure_credential = DefaultAzureCredential(authority=AUTHORITY)
-else:
-    azure_credential = ManagedIdentityCredential(authority=AUTHORITY)
-token_provider = get_bearer_token_provider(azure_credential, f'https://{os.environ.get("AZURE_AI_CREDENTIAL_DOMAIN")}/.default')
+    def execute_sql_query(self, sql_query):
+        try:
+            cursor = self.db_connection.cursor()
+            cursor.execute(sql_query)
+            result = cursor.fetchall()  # Fetch all results from the query execution
+            return result
+        except Exception as e:
+            return f"Error executing SQL query: {str(e)}"
 
-model = AzureChatOpenAI(
-    azure_ad_token_provider=token_provider,
-    azure_endpoint=OPENAI_API_BASE,
-    openai_api_version="2024-02-01" ,
-    deployment_name=OPENAI_DEPLOYMENT_NAME)
+# Insight Generator Agent
+class InsightGeneratorAgent:
+    def __init__(self, llm):
+        self.llm = llm
 
-dffinal = None
-pdagent = None
-agent_imgs = []
+    def generate_insight(self, user_query, sql_query, execution_result):
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """
+                    You are an assistant for converting the result into a natural language response to user's query.
+                    The result is from executing an SQL query on an SQLite database, and you need to generate natural language response from it.
+                    user query: {user_query}
+                    sql query: {sql_query}
+                    Execution Result: {execution_result}
+                    Provide a natural language response or key insights based on the execution result.
+                    
+                    for e.g.
+                    user query: "Give me the count of records in dataTable?"
+                    sql query: SELECT COUNT(*) FROM dataTable
+                    Execution Result: [(200,)]
+                    Response: "The table contains 200 data points."
+                    """,
+                ),
+            ]
+        )
 
-def refreshagent():
-    global pdagent
-    pdagent = None
-def get_image_data(image_path):
-    with Image.open(image_path) as img:
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-        img_base64 = base64.b64encode(img_byte_arr)
-    return img_base64.decode('utf-8')
+        # Generate insight from execution result
+        chain = prompt | self.llm
+        response = chain.invoke({"user_query": user_query,
+                                 "sql_query": sql_query,
+                                 "execution_result": execution_result})
+        return response.content.strip()
 
-def save_chart(query):
-    temp_dir = tempfile.gettempdir()
-    q_s = f'''You are a assistant to help analyze CSV data that is placed in a dataframe and are a dataframe ally. You analyze every row, addressing all queries with unwavering precision. Make sure that you pass in valid json to if required.
-    You DO NOT answer based on subset of the dataframe or top 5 or based on head() output. Do not create an example dataframe. Use the dataframe provided to you. You need to look at all rows and then answer questions based on the entire dataframe and ensure the input to any tool is valid. Data is case insensitive.
-    Normalize column names by converting them to lowercase and replacing spaces with underscores to handle discrepancies in column naming conventions.
-    If any charts or graphs or plots were created save them in the {temp_dir} directory. Make sure the output of the result includes the final result and not just the chart or graph. Put the charts in the {temp_dir} directory and not the final output.
-    Remember, you can handle both singular and plural forms of queries. 
+# Convert CSV to SQLite Database
+def csv_to_sqlite(csv_file_path, sqlite_db_path):
+    # Load CSV into pandas DataFrame
+    df = pd.read_csv(csv_file_path)
+    # Create SQLite database and write the DataFrame to it
+    conn = sqlite3.connect(sqlite_db_path)
+    df.to_sql('dataTable', conn, if_exists='replace', index=False)
+    sample_records = df.head(5).to_dict(orient="records")
+    return conn, sample_records
+
+# Main Logic
+def main(user_query, csv_file_path, sqlite_db_path):
+    # Step 1: Convert CSV to SQLite
+    db_connection, sample_records = csv_to_sqlite(csv_file_path, sqlite_db_path)
     
-    For example:
-    - If you ask \'How many thinkpads do we have?\' or \'How many thinkpad do we have?\', you will address both forms in the same manner.
-    - Similarly, for other queries involving counts, averages, or any other operations.'''
+    # Step 2: Get database schema (tables and column info)
+    db_info = get_db_schema(db_connection)
+    # print("database info: \n", db_info)
+    # Initialize agents
+    code_generator = CodeGeneratorAgent(llm=model)
+    code_executor = CodeExecutorAgent(db_connection=db_connection)
+    insight_generator = InsightGeneratorAgent(llm=model)
+
+    # Step 3: Generate SQL Query (Agent A)
+    generated_sql_query = code_generator.generate_sql_query(query=user_query, db_info=db_info, sample_records=sample_records)
+    print("Generated SQL Query:\n", generated_sql_query)
+
+    # Step 4: Execute the SQL query (Agent B)
+    execution_result = code_executor.execute_sql_query(generated_sql_query)
+    print("Execution Result:\n", execution_result)
+
+    # Step 5: Generate insights from the execution result (Agent C)
+    insight = insight_generator.generate_insight(user_query=user_query,sql_query=generated_sql_query, execution_result=execution_result)
+    # print("Insight:\n", insight)
+
+    return insight
+
+# Get database schema
+def get_db_schema(db_connection):
+    cursor = db_connection.cursor()
+    cursor.execute("PRAGMA table_info(dataTable);")
+    schema_info = cursor.fetchall()
+    db_info = "\n".join([f"Column: {col[1]}, Type: {col[2]}" for col in schema_info])
     
-    query += ' . '+ q_s
-    return query
+    return db_info
 
-def get_images_in_temp():
-    temp_dir = tempfile.gettempdir()
-    image_files = glob.glob(os.path.join(temp_dir, '*.[pjJ][npNP][gG]*'))
-    image_data = [get_image_data(file) for file in image_files]
 
-    # Delete the files after reading them
-    for file in image_files:
-        os.remove(file)
-        
-    return image_data
- 
-def save_df(dff):
-    global dffinal
-    dffinal = dff
- 
-# function to stream agent response 
-def process_agent_scratch_pad(question, df):
-         
-    question = save_chart(question)
-    # This agent relies on access to a python repl tool which can execute arbitrary code.
-    # This can be dangerous and requires a specially sandboxed environment to be safely used.
-    # Failure to properly sandbox this class can lead to arbitrary code execution vulnerabilities,
-    # which can lead to data breaches, data loss, or other security incidents. You must opt in
-    # to use this functionality by setting allow_dangerous_code=True.
-    # https://api.python.langchain.com/en/latest/agents/langchain_experimental.agents.agent_toolkits.pandas.base.create_pandas_dataframe_agent.html
-    pdagent = create_pandas_dataframe_agent(model, df, verbose=True,agent_type=AgentType.OPENAI_FUNCTIONS,allow_dangerous_code=True , agent_executor_kwargs={"handle_parsing_errors": True})
-    for chunk in pdagent.stream({"input": question}):
-        if "actions" in chunk:
-            for action in chunk["actions"]:
-                yield f'data: Calling Tool: `{action.tool}` with input `{action.tool_input}`\n'
-                yield f'data: \nProcessing...: {action.log}\n'
-        elif "steps" in chunk:
-            for step in chunk["steps"]:
-                yield f'data: Tool Result: `{step.observation}` \n\n'
-        elif "output" in chunk:
-            output = chunk["output"].replace("\n", "<br>")
-            yield f'data: Final Output: {output}\n\n'
-            yield (f'event: end\ndata: Stream ended\n\n')
-            return
-        else:
-            raise ValueError()
+model = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    temperature=0.1,
+    max_tokens=None,
+    timeout=None,
+    max_retries=2,
+    api_key="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"
+    # other params...
+)
+if __name__ == "__main__":
+    user_query = "what is the mean price for each location?"
+    csv_file_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\app\backend\test_data\parts_inventory.csv"  # Path to your CSV file
+    sqlite_db_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\app\backend\test_data\parts_inventory.db"   # Path to the SQLite database
 
-#Function to stream final output       
-def process_agent_response(question, df):
-    question = save_chart(question)
-
-    pdagent = create_pandas_dataframe_agent(model,
-                                            df,
-                                            verbose=True,
-                                            agent_type=AgentType.OPENAI_FUNCTIONS,
-                                            allow_dangerous_code=True,
-                                            agent_executor_kwargs={"handle_parsing_errors": True})
-    for chunk in pdagent.stream({"input": question}):
-        if "output" in chunk:
-            output = f'Final Output: ```{chunk["output"]}```'
-            return output
+    # Call the main function
+    print("Query: ", user_query)
+    insight = main(user_query, csv_file_path, sqlite_db_path)
+    print("Final Insight:", insight)
