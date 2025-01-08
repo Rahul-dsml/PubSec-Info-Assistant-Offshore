@@ -18,6 +18,14 @@ class CodeGeneratorAgent:
                     Table name: dataTable
                     Schema: {db_info}
                     Sample records: {sample_records}
+                    
+                    Always evaluate the user's question against the following criteria. If any criterion is met, respond with "TERMINATE-FLOW" followed by a one-liner follow-up asking for clarification:
+                    1. The user's question is incomplete, irrelevant, empty or does not provide enough information for a meaningful response.
+                    2. The user's question is not related to the given table and column schema.
+                    3. Provide a direct answer to valid questions without asking unnecessary clarifications.
+                    4. Ask for clarification only when the question is genuinely unclear or lacks essential details.
+                    5. If user query is greeting or not relevant for SQL query then generate response with greeting and follow up question to define user criteria for real estate property selection or filtering.
+                    
                     THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     """,
                 ),
@@ -108,16 +116,18 @@ def main(user_query, csv_file_path, sqlite_db_path):
     # Step 3: Generate SQL Query (Agent A)
     generated_sql_query = code_generator.generate_sql_query(query=user_query, db_info=db_info, sample_records=sample_records)
     print("Generated SQL Query:\n", generated_sql_query)
+    if "terminate-flow" not in str(generated_sql_query).lower():
+        # Step 4: Execute the SQL query (Agent B)
+        execution_result = code_executor.execute_sql_query(generated_sql_query)
+        print("Execution Result:\n", execution_result)
 
-    # Step 4: Execute the SQL query (Agent B)
-    execution_result = code_executor.execute_sql_query(generated_sql_query)
-    print("Execution Result:\n", execution_result)
+        # Step 5: Generate insights from the execution result (Agent C)
+        insight = insight_generator.generate_insight(user_query=user_query,sql_query=generated_sql_query, execution_result=execution_result)
+        # print("Insight:\n", insight)
 
-    # Step 5: Generate insights from the execution result (Agent C)
-    insight = insight_generator.generate_insight(user_query=user_query,sql_query=generated_sql_query, execution_result=execution_result)
-    # print("Insight:\n", insight)
-
-    return insight
+        return insight
+    else:
+        return generated_sql_query
 
 # Get database schema
 def get_db_schema(db_connection):
@@ -140,7 +150,7 @@ model = ChatGroq(
 )
 if __name__ == "__main__":
     # user_query = "Recommend me 3 stocks which have average price closer to that of 'Armor Plate Stryker'"
-    user_query = "Give me 5 top properties with 3 bedrooms and a living area less than ​​400 square meters, with a price ranging between 0.1 million and 0.5 million riyals."
+    user_query = "Hi I am looking for some properties."
     csv_file_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\app\backend\test_data\Recommender - Sample Data(units_av).csv"  # Path to your CSV file
     sqlite_db_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\app\backend\test_data\real_estate.db"   # Path to the SQLite database
 
