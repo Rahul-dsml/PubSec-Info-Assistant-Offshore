@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
-from model import ChatResponse
+from backend.model import ChatResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
