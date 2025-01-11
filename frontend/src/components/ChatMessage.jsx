@@ -14,7 +14,7 @@ export default function ChatMessage({ message, isUser, isLoading }) {
         isUser ? "flex-row-reverse" : "flex-row"
       } items-start mb-4`}
     >
-      <Avatar className="w-8 h-8 md:w-12 md:h-12 bg-cyan-400">
+      <Avatar className="w-8 h-8 md:w-10 md:h-10 bg-cyan-400">
         <AvatarImage src={isUser ? user : bot} />
         <AvatarFallback className="bg-cyan-500">
           {isUser ? "U" : "B"}
