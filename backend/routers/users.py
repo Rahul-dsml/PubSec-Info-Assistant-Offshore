@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.responses import JSONResponse
-from approaches.agent import bot_response, prompt_creation
-
+from approaches.agent import bot_response, prompt_creation,refine_question
+from approaches.realassistant import main
 from model import ChatResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -13,6 +13,20 @@ async def assistant_chat(response:ChatResponse):
     chat_history=response.chat_history
     chat_language=response.chat_language
     response = bot_response(prompt_creation(user_query, chat_history), language=chat_language)
+    print(response)
+    if "terminate flow" in response.lower():
+        print("terminate flow")
+        response=response.lower().replace('terminate flow',"")
+        response=response.capitalize()
+        # refine question based history
+        refined_user_query=refine_question(chat_history)
+        print(refined_user_query)
+        csv_file_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\project_name_district_apartment&unit_type_eng_v3.csv"  # Path to your CSV file
+        sqlite_db_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\real_estate.db"   # Path to the SQLite database
+        # sql generator
+        # insights generator
+        response = main(user_query, csv_file_path, sqlite_db_path)
+
     return JSONResponse(content=response, status_code=200)
     # print("User Question ::",user_query)
     # print("Chat History ::",chat_history)

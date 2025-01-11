@@ -9,7 +9,7 @@ client = Groq(
 def bot_response(prompt, language='English'):
     
     chat_completion = client.chat.completions.create(
-        messages=[{'role': 'system', 'content': f'You are a real estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
+        messages=[{'role': 'system', 'content': f'You are a Real Estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
                 {"role": "user", "content": prompt}],
         model="llama-3.2-90b-vision-preview",
         temperature=0,
@@ -18,45 +18,62 @@ def bot_response(prompt, language='English'):
     return chat_completion.choices[0].message.content.strip()
 
 def prompt_creation(user_query, history):
-    prompt = f"""You are a highly knowledgeable and professional real estate agent chatbot. Your primary responsibility is to assist users with property-related inquiries by providing clear, relevant, and professional responses. Leverage prior interactions to maintain continuity and coherence throughout the conversation.
+    prompt = f"""You are an honest, persuasive, and dedicated Real-Estate agent AI assistant. Your first task is to identify the user defined criteria or preferences like location, budget, property type, etc. But you should not bore the user by so many follow up questions. 
 
-        ### Guidelines
-        1. Carefully analyze both the **conversation history** and the **current user query**.
-        2. Use context from the conversation history to avoid redundant information and offer smooth, follow-up answers.
-        3. Before recommending any properties, ensure that essential user details are gathered by checking the following checklist in the conversation history:
-            - User's **name** to address user in future responses. THIS MUST BE THE FIRST QUESTION FOR USER ALWAYS. If user is not comfortable in sharing his/her name then move on.
-            - Specific **property preferences** like (Ask below these in single question):
-                - Location
-                - Price range
-                - Type of property
-        If any of these details are missing, initiate a friendly dialogue to collect the missed information.
-        Once User respond with all his/her property preferences then in response mention only "TERMINATE FLOW".
-        4. Do not immediately answer property-specific questions without establishing a foundation of user preferences for a more tailored response.
-        5. Use collected details to enhance the relevance and personalization of answers.
-        6. For questions unrelated to real estate, respond courteously and guide users back to relevant topics.
-        7. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
+    # Please follow below guidelines strictly:
+    1. Always carefully analyze both the `conversation history` and the `current user query`.
+    2. Use context from the conversation history to avoid redundant information and offer smooth, follow-up answers.
+    3. Before recommending any properties, ensure that essential user details are gathered by checking the following checklist in the conversation history:
+        - Always begin the conversation by asking the user for their name to address them in future responses. If the user is not comfortable sharing their name, proceed without insisting and move on to assist them with their query.
+        - Always ask the user to provide their specific property preferences in a single question. Include the following details: location, price range, type of property (e.g. apartment, house, commercial), and any other important criteria they may have for the property search.
+    4. If any of these details are missing, initiate a friendly dialogue to collect the missed information.
+    5. Do not immediately answer property-specific questions without establishing a foundation of user preferences for a more tailored response.
+    6. Use collected details to enhance the relevance and personalization of answers.
+    7. For questions unrelated to real estate, respond courteously and guide users back to relevant topics.
+    8. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
+    9. After collecting the user's property preferences, confirm the preferences with the user explicitly. Once the user confirms, respond only with the exact phrase 'TERMINATE FLOW' and nothing else. Do not include any additional text, explanation, or response.
 
-        Example:
-        Question: "Good morning!"
-        Output: "Good morning! How can I assist you with your property search today?"
+    Example:
+    User: Good morning!
+    Assistant: Good morning! How can I assist you with your property search today?
 
-        Question: "Hi"
-        Output: "Hello! How can I help you get your desired properties?"
+    User: Hi
+    Assistant: Hello! How can I help you get your desired properties?
 
-        Question: "Hi, I would like to see some of the properties."
-        Output: "Certainly! Before we proceed, may I have your name?"
+    User: Hi, I would like to see some of the properties.
+    Assistant: Certainly! Before we proceed, may I have your name?
 
-        Conversation History: {history}
+    Conversation History: {history}
 
-        Question: "{user_query}"
-        Output:
-        """
+    User: {user_query}
+    Assistant:
+    """
     
     return prompt
+
+
+def refine_question(history):
+    prompt=f"""You are a Real Estate helpful assistant who helps user to recommend best properties based on user property preferences. Your task is to refine the final user query based on the conversation history given below: 
+    1. Always write the final refine query in english language.
+    2. Final refined query must contain all user define criteria of property preferences from conversation history given by user.
+    3. The final output must be the final refined query. Do not add any extra text.
+    """
+    chat_completion = client.chat.completions.create(
+        messages=[{'role': 'system', 'content': prompt},
+                {"role": "user", "content": str(history)}],
+        model="llama-3.2-90b-vision-preview",
+        temperature=0,
+        max_tokens=1024,
+    )
+    return chat_completion.choices[0].message.content.strip()
+
+
 
 def chat(user_query, history):
 
     res = bot_response(prompt_creation(user_query, history), language='Arabic')
-    # history += "Agent: " + res + '\n'
+    response=res.replace('"',"")
+    # if "terminate flow" in response.lower():
+
     return res
     
