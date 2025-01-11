@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion';
 
 const HeroSection = () => {
+  const phrases = [
+    "Dream Property",
+    "Ideal Home",
+    "Perfect Investment",
+    "Luxury Living",
+  ];
 
   return (
 
@@ -15,7 +21,7 @@ const HeroSection = () => {
     <h1 className=" font-heading font text-4xl font-bold text-white md:text-5xl ">
       Find Your{" "}
       <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent font-extrabold animate-pulse">Dream Property</span>{" "}
-     
+     {/* <br /> */}
       with Ease!
     </h1>
     <p className="mt-4 text-lg text-slate-300 md:text-xl">

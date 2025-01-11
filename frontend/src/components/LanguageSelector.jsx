@@ -22,7 +22,7 @@ export default function LanguageDropdown({language,setLanguage}) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className=" bg-slate-700 border-cyan-500 rounded-full hover:bg-slate-800 transition-all ease-in"
+          className=" bg-slate-700 hover:border-slate-400 hover:border rounded-full hover:bg-slate-800 transition-all ease-in"
           
         >
           <Globe className="" />

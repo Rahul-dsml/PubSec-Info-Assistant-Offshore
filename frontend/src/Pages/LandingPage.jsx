@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import useAppStore from "@/state/zustand";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Send, Turtle } from "lucide-react";
+import { ArrowUpRight, MessageSquareDiff, Send, SendHorizontal, Turtle } from "lucide-react";
 import { FiSend } from "react-icons/fi";
 
 import { useState } from "react";
@@ -122,6 +122,13 @@ export default function App() {
    
   };
 
+  const handleNewChat = () =>{
+    setIsChat(false)
+    setConvHistory([])
+    setInputValue("")
+    setMessages([])
+  }
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-r from-slate-900 to-slate-700 text-white relative overflow-hidden">
       <BackgroundIcons />
@@ -130,6 +137,7 @@ export default function App() {
       <div className={`chat-wrapper ${isChat ? "flex flex-col " : ""}`}>
     {isChat ? (
       <div className="h-[65vh] overflow-hidden rounded-xl max-w-3xl md:max-w-4xl w-full mx-auto">
+      
         <ChatContainer messages={messages} />
       </div>
     ) : (
@@ -175,14 +183,15 @@ export default function App() {
               placeholder="What would you like to search..."
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              // onKeyDown={(e) => {
-              //   if (e.key === "Enter" && !e.shiftKey) {
-              //     e.preventDefault();
-              //     handleSend();
-              //   }
-              // }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
             />
             <div className="sendButton flex justify-end gap-2  items-center p-1 mr-1">
+            {isChat&&<Button onClick={handleNewChat} className="bg-slate-700 rounded-full flex items-center" ><MessageSquareDiff className="h-12 w-12" absoluteStrokeWidth /> <span>New Chat</span></Button>}
               <LanguageSelector language={language} setLanguage={setLanguage} />
               <Button
               variant='outline'
@@ -190,7 +199,8 @@ export default function App() {
                 onClick={handleSend}
                 className="text-slate-800  rounded-full  bg-white transition-all ease-in hover:bg-slate-800 hover:text-white"
               >
-               <Send className="h-16 w-16" strokeWidth={2.5} absoluteStrokeWidth />
+              
+               <SendHorizontal className="h-16 w-16" strokeWidth={2.5} absoluteStrokeWidth />
               <span className="font-semibold">Send</span>
               </Button>
 
