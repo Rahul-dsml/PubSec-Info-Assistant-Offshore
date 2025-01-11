@@ -31,7 +31,7 @@ export default function ChatMessage({ message, isUser, isLoading }) {
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.2 }}
-          className={`max-w-[80%] rounded-2xl p-4 ${
+          className={`max-w-[80%] text-start rounded-2xl p-4 ${
             isUser
               ? "bg-cyan-600 text-white"
               : "bg-slate-700/50 backdrop-blur-xl text-white"

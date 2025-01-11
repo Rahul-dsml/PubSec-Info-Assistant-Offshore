@@ -19,10 +19,10 @@ export default function App() {
  
 
   const [isFocused, setIsFocused] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([{text: "Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!", isUser: false, isLoading: false}]);
   const [isChat, setIsChat] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const [convHistory,setConvHistory] = useState([{}])
+  const [convHistory,setConvHistory] = useState([{role: 'assistant', content:"Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"}])
 
   const [language,setLanguage] = useState('English')
 
@@ -124,9 +124,9 @@ export default function App() {
 
   const handleNewChat = () =>{
     setIsChat(false)
-    setConvHistory([])
+    setConvHistory([{role: 'assistant', content:"Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"}])
     setInputValue("")
-    setMessages([])
+    setMessages([{text: "Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!", isUser: false, isLoading: false}])
   }
 
   return (
@@ -180,7 +180,7 @@ export default function App() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               className="w-full h-20 border-none bg-transparent text-white placeholder:text-gray-400 text-lg p-6 rounded-3xl relative z-10 backdrop-blur-sm resize-none"
-              placeholder="What would you like to search..."
+              placeholder="Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               onKeyDown={(e) => {
