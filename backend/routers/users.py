@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from fastapi.responses import JSONResponse
-from approaches.agent import bot_response, prompt_creation,refine_question
+from approaches.agent import bot_response, prompt_creation, refine_question
 from approaches.realassistant import main
 from model import ChatResponse
 
@@ -23,8 +23,8 @@ async def assistant_chat(response:ChatResponse):
         # refine question based history
         refined_user_query=refine_question(chat_history,user_query)
         print(refined_user_query)
-        csv_file_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\project_name_district_apartment&unit_type_eng_v3.csv"  # Path to your CSV file
-        sqlite_db_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\real_estate.db"   # Path to the SQLite database
+        csv_file_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\data\translated_file.csv"  # Path to your CSV file
+        sqlite_db_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\data\real_estate.db"   # Path to the SQLite database
         # sql generator
         # insights generator
         response = main(refined_user_query, csv_file_path, sqlite_db_path,chat_language)

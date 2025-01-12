@@ -4,9 +4,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 
 
-
-
-
 model = ChatGroq(
     model="llama-3.3-70b-versatile",
     temperature=0.1,
@@ -69,7 +66,7 @@ class InsightGeneratorAgent:
     def __init__(self, llm):
         self.llm = llm
 
-    def generate_insight(self, user_query, sql_query, execution_result,chat_language):
+    def generate_insight(self, user_query, sql_query, execution_result, chat_language):
         if chat_language.lower()=="english":
             prompt = ChatPromptTemplate.from_messages(
                 [
