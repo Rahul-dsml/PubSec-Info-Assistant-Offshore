@@ -14,18 +14,20 @@ async def assistant_chat(response:ChatResponse):
     chat_language=response.chat_language
     response = bot_response(prompt_creation(user_query, chat_history), language=chat_language)
     print(response)
+    print("--------------------------------------------------------")
+    # print(chat_history)
     if "terminate flow" in response.lower():
         print("terminate flow")
         response=response.lower().replace('terminate flow',"")
         response=response.capitalize()
         # refine question based history
-        refined_user_query=refine_question(chat_history)
+        refined_user_query=refine_question(chat_history,user_query)
         print(refined_user_query)
         csv_file_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\project_name_district_apartment&unit_type_eng_v3.csv"  # Path to your CSV file
         sqlite_db_path = r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\approaches\real_estate.db"   # Path to the SQLite database
         # sql generator
         # insights generator
-        response = main(user_query, csv_file_path, sqlite_db_path)
+        response = main(refined_user_query, csv_file_path, sqlite_db_path,chat_language)
 
     return JSONResponse(content=response, status_code=200)
     # print("User Question ::",user_query)

@@ -11,7 +11,7 @@ def bot_response(prompt, language='English'):
     chat_completion = client.chat.completions.create(
         messages=[{'role': 'system', 'content': f'You are a Real Estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
                 {"role": "user", "content": prompt}],
-        model="llama-3.2-90b-vision-preview",
+        model="llama-3.3-70b-versatile", # "llama-3.2-90b-vision-preview",
         temperature=0,
         max_tokens=1024,
     )
@@ -26,25 +26,23 @@ def prompt_creation(user_query, history):
     3. Before recommending any properties, ensure that essential user details are gathered by checking the following checklist in the conversation history:
         - Always begin the conversation by asking the user for their name to address them in future responses. If the user is not comfortable sharing their name, proceed without insisting and move on to assist them with their query.
         - Always ask the user to provide their specific property preferences in a single question. Include the following details: location, price range, type of property (e.g. apartment, house, commercial), and any other important criteria they may have for the property search.
-    4. If any of these details are missing, initiate a friendly dialogue to collect the missed information.
-    5. Do not immediately answer property-specific questions without establishing a foundation of user preferences for a more tailored response.
-    6. Use collected details to enhance the relevance and personalization of answers.
-    7. For questions unrelated to real estate, respond courteously and guide users back to relevant topics.
-    8. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
-    9. After collecting the user's property preferences, confirm the preferences with the user explicitly. Once the user confirms, respond only with the exact phrase 'TERMINATE FLOW' and nothing else. Do not include any additional text, explanation, or response.
+    4. Always review the Conversation History to determine if the user's property preferences have already been collected. If they have, respond with the exact phrase 'TERMINATE FLOW' and avoid asking the user for their preferences again.
+    5. If any of these details are missing, initiate a friendly dialogue to collect the missed information.
+    6. Do not immediately answer property-specific questions without establishing a foundation of user preferences for a more tailored response.
+    7. Use collected details to enhance the relevance and personalization of answers.
+    8. For questions unrelated to real estate, respond courteously and guide users back to relevant topics.
+    9. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
+    10. After collecting the user's property preferences, confirm the preferences with the user explicitly. Once the user confirms, respond only with the exact phrase 'TERMINATE FLOW' and nothing else. Do not include any additional text, explanation, or response.
 
     Example:
     User: Good morning!
     Assistant: Good morning! How can I assist you with your property search today?
-
     User: Hi
     Assistant: Hello! How can I help you get your desired properties?
-
     User: Hi, I would like to see some of the properties.
     Assistant: Certainly! Before we proceed, may I have your name?
 
     Conversation History: {history}
-
     User: {user_query}
     Assistant:
     """
@@ -52,7 +50,8 @@ def prompt_creation(user_query, history):
     return prompt
 
 
-def refine_question(history):
+def refine_question(history,user_query):
+    history.append({'role': 'user', 'content': user_query})
     prompt=f"""You are a Real Estate helpful assistant who helps user to recommend best properties based on user property preferences. Your task is to refine the final user query based on the conversation history given below: 
     1. Always write the final refine query in english language.
     2. Final refined query must contain all user define criteria of property preferences from conversation history given by user.

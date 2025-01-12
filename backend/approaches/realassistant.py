@@ -34,8 +34,9 @@ class CodeGeneratorAgent:
                     Table name: dataTable
                     Schema: {db_info}
                     Sample records: {sample_records}
-                    
-                    THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    1. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
+                    2. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
+                    3. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     """,
                 ),
                 ("human", "User Query: {query}"),
@@ -68,28 +69,55 @@ class InsightGeneratorAgent:
     def __init__(self, llm):
         self.llm = llm
 
-    def generate_insight(self, user_query, sql_query, execution_result):
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    """
-                    You are a real estate assistant with ARABIC native language for converting the result into a natural language response to user's query.
-                    The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in arabic language from it.
-                    user query: {user_query}
-                    sql query: {sql_query}
-                    Execution Result: {execution_result}
-                    Provide the recommendations as natural language response in ARABIC LANGUAGE based on the execution result.
-                    
-                    for e.g.
-                    user query: "Give me the count of records in dataTable?"
-                    sql query: SELECT COUNT(*) FROM dataTable
-                    Execution Result: [(200,)]
-                    Response: "يحتوي الجدول على 200 نقطة بيانات."
-                    """,
-                ),
-            ]
-        )
+    def generate_insight(self, user_query, sql_query, execution_result,chat_language):
+        if chat_language.lower()=="english":
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        """
+                        You are a real estate assistant with ENGLISH native language for converting the result into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
+
+                        # Use below instruction to generate the final response:
+                        1. Use bullet point to show the recommendations.
+                        2. Include only user specific property preferences like location, price range, type of property in final recommendations until user not ask specifically.
+
+                        user query: {user_query}
+                        sql query: {sql_query}
+                        Execution Result: {execution_result}
+                        Provide the recommendations as natural language response in english LANGUAGE based on the execution result.
+                        
+                        for e.g.
+                        user query: Give me the count of records in dataTable?
+                        sql query: SELECT COUNT(*) FROM dataTable
+                        Execution Result: [(200,)]
+                        Response: The table contains 200 data points.
+                        """,
+                    ),
+                ]
+            )
+        else:
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        """
+                        You are a real estate assistant with ARABIC native language for converting the result into a natural language response to user's query.
+                        The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in arabic language from it.
+                        user query: {user_query}
+                        sql query: {sql_query}
+                        Execution Result: {execution_result}
+                        Provide the recommendations as natural language response in ARABIC LANGUAGE based on the execution result.
+                        
+                        for e.g.
+                        user query: "Give me the count of records in dataTable?"
+                        sql query: SELECT COUNT(*) FROM dataTable
+                        Execution Result: [(200,)]
+                        Response: "يحتوي الجدول على 200 نقطة بيانات."
+                        """,
+                    ),
+                ]
+            )
 
         # Generate insight from execution result
         chain = prompt | self.llm
@@ -110,7 +138,7 @@ def csv_to_sqlite(csv_file_path, sqlite_db_path):
     return conn, sample_records
 
 # Main Logic
-def main(user_query, csv_file_path, sqlite_db_path):
+def main(user_query, csv_file_path, sqlite_db_path,chat_language):
     # Step 1: Convert CSV to SQLite
     db_connection, sample_records = csv_to_sqlite(csv_file_path, sqlite_db_path)
     print(sample_records)
@@ -131,7 +159,7 @@ def main(user_query, csv_file_path, sqlite_db_path):
         # print("Execution Result:\n", execution_result)
 
         # Step 5: Generate insights from the execution result (Agent C)
-        insight = insight_generator.generate_insight(user_query=user_query,sql_query=generated_sql_query, execution_result=execution_result)
+        insight = insight_generator.generate_insight(user_query=user_query,sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
         # print("Insight:\n", insight)
 
         return insight
@@ -150,13 +178,14 @@ def get_db_schema(db_connection):
 
 
 
-if __name__ == "__main__":
-    # user_query = "Recommend me 3 stocks which have average price closer to that of 'Armor Plate Stryker'"
-    user_query = "Hi I am looking for some properties."
-    csv_file_path = "project_name_district_apartment&unit_type_eng_v3"  # Path to your CSV file
-    sqlite_db_path = "real_estate.db"   # Path to the SQLite database
+# if __name__ == "__main__":
+#     print("------------------------------------++++++++++++++++++++++++++++++++++++++++++++")
+#     # user_query = "Recommend me 3 stocks which have average price closer to that of 'Armor Plate Stryker'"
+#     user_query = "Hi I am looking for properties in district Summer."
+#     csv_file_path = "project_name_district_apartment&unit_type_eng_v3"  # Path to your CSV file
+#     sqlite_db_path = "real_estate.db"   # Path to the SQLite database
 
-    # Call the main function
-    print("Query: ", user_query)
-    insight = main(user_query, csv_file_path, sqlite_db_path)
-    print("Final Insight:", insight)
+#     # Call the main function
+#     print("Query: ", user_query)
+#     insight = main(user_query, csv_file_path, sqlite_db_path)
+#     print("Final Insight:", insight)
