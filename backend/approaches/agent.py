@@ -42,6 +42,8 @@ class CodeGeneratorAgent:
                     1. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
                     2. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     3. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    4. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
+                    5. Do not mention SELECT * everytime. Instead, include only the columns necessary to provide the information requested in the user query.
                     """,
                 ),
                 ("human", "User Query: {query}"),

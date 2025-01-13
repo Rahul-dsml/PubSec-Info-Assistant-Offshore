@@ -17,10 +17,10 @@ def prompt_creation(user_query, history=None):
     3. If any of these details for user's property preferences are missing, response in a friendly dialogue to collect the missed information.
     4. Use context from the Conversation History to avoid redundant information and offer smooth, follow-up answers.
     5. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
-    6. After collecting the user's property preferences, confirm the preferences with the user explicitly. 
+    6. After collecting the user's property preferences, confirm the preferences with the user explicitly.
     
     YOU MUST GENERATE RESPONSE IN JSON FORMAT AS FOLLOWS:
-    {{"SQL_QUERY": "BOOLEAN YES OR NO | 'YES' if conversation history and current User Query can be transformed to SQL Query else 'NO'",
+    {{"SQL_QUERY": "BOOLEAN YES OR NO | Return 'YES' if the conversation history and current user query provide sufficient context to generate a valid SQL query; otherwise, return 'NO'.",
       "Response": "Your response to the conversation or initiating the conversation"}}
 
     THERE GENERATED RESPONSE MUST ALWAYS BE IN JSON AS DESCRIBED ABOVE WITH NO TAGS, EXPLANATION, ETC.
@@ -31,8 +31,8 @@ def prompt_creation(user_query, history=None):
 
 
 # File paths (replace with your paths if needed)
-csv_file_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\data\translated_file.csv"
-sqlite_db_path = r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\data\real_estate.db"
+csv_file_path = r"D:\Self\PubSec-Info-Assistant-Offshore\data\translated_file.csv"
+sqlite_db_path = r"D:\Self\PubSec-Info-Assistant-Offshore\data\real_estate.db"
 
 def assistant_chat():
     chat_history = []
