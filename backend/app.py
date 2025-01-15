@@ -10,14 +10,14 @@ load_dotenv()
 
 
 # @asynccontextmanager
-# async def lifespan(app: FastAPI):
-# 	# Run at startup
-# 	asyncio.create_task(setup.create_service())
-# 	yield
-# 	# Run on shutdown (if required)
-# 	print('It is shutting down...')
+async def lifespan(app: FastAPI):
+	# Run at startup
+	asyncio.create_task(setup.create_service())
+	yield
+	# Run on shutdown (if required)
+	print('It is shutting down...')
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # CORS setup
 app.add_middleware(
@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 # Routers
-# app.include_router(setup.router)
+app.include_router(setup.router)
 # app.include_router(auth.router)
 app.include_router(users.router)
 

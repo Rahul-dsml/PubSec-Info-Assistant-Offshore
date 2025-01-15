@@ -4,10 +4,17 @@ import sqlite3
 import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-
+from utility.chat_helper import DataDictionaryPrompt
 from dotenv import load_dotenv
+import json
+import ast
+
 
 load_dotenv()
+
+
+
+
 client = Groq(
     api_key= os.getenv("GROQ_API_KEY"),
 )
@@ -19,7 +26,7 @@ model = ChatGroq(
     max_tokens=None,
     timeout=None,
     max_retries=2,
-    api_key="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"
+    api_key="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"
     # other params...
 )
 
@@ -28,22 +35,26 @@ class CodeGeneratorAgent:
     def __init__(self, llm):
         self.llm = llm
 
-    def generate_sql_query(self, query, db_info, sample_records):
+    def generate_sql_query(self, query,dict_prompt):
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
                     """
-                    You are an assistant for generating SQL queries for an SQLite database.
-                    The database schema and details are provided below:
-                    Table name: dataTable
-                    Schema: {db_info}
-                    Sample records: {sample_records}
-                    1. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
-                    2. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
-                    3. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
-                    4. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
-                    5. Do not mention SELECT * everytime. Instead, include only the columns necessary to provide the information requested in the user query.
+                    You are an expert DATA ANALYST for Real Estate. You have access to a database and the capability to interact with the database and write SQL queries.
+                    
+                    You can find the table and column descriptions/schema below:
+                    {db_info}
+                    
+                    Instructions:
+                    1. Use SQL dialect -> {dialect} when writing SQL queries.
+                    2. Review the user's query thoroughly to understand its intent. Carefully verify the table names and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
+                    3. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
+                    4. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
+                    5. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    6. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
+                    7. Do not mention SELECT * everytime. Instead, include only the columns necessary to provide the information requested in the user query.
+                    8. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
                     """,
                 ),
                 ("human", "User Query: {query}"),
@@ -52,15 +63,15 @@ class CodeGeneratorAgent:
 
         # Use the LLM to generate SQL query
         chain = prompt | self.llm
-        response = chain.invoke({"db_info": db_info, 
-                                 "sample_records": sample_records,
+        response = chain.invoke({"db_info": dict_prompt, 
+                                 "dialect": "sqllite",
                                  "query": query})
         return response.content.strip()  # Remove extra whitespace or newlines
 
 # Code Executor Agent (SQL Query Executor)
 class CodeExecutorAgent:
-    def __init__(self, db_connection):
-        self.db_connection = db_connection
+    def __init__(self):
+        self.db_connection = sqlite3.connect("real_estate.db")
 
     def execute_sql_query(self, sql_query):
         try:
@@ -70,6 +81,8 @@ class CodeExecutorAgent:
             return result
         except Exception as e:
             return f"Error executing SQL query: {str(e)}"
+
+
 
 # Insight Generator Agent
 class InsightGeneratorAgent:
@@ -140,103 +153,30 @@ def csv_to_sqlite(csv_file_path, sqlite_db_path):
     # df = pd.read_csv()
     # Create SQLite database and write the DataFrame to it
     conn = sqlite3.connect(sqlite_db_path)
-    df.to_sql('dataTable', conn, if_exists='replace', index=False)
-    sample_records = df.head(5).to_dict(orient="records")
-    return conn, sample_records
+    df.to_sql('real_estate', conn, if_exists='replace', index=False)
 
-# Main Logic
-def main(user_query, csv_file_path, sqlite_db_path,chat_language):
-    # Step 1: Convert CSV to SQLite
-    db_connection, sample_records = csv_to_sqlite(csv_file_path, sqlite_db_path)
-    print(sample_records)
-    # Step 2: Get database schema (tables and column info)
-    db_info = get_db_schema(db_connection)
-    print("database info: \n", db_info)
-    # Initialize agents
-    code_generator = CodeGeneratorAgent(llm=model)
-    code_executor = CodeExecutorAgent(db_connection=db_connection)
-    insight_generator = InsightGeneratorAgent(llm=model)
-
-    # Step 3: Generate SQL Query (Agent A)
-    generated_sql_query = code_generator.generate_sql_query(query=user_query, db_info=db_info, sample_records=sample_records)
-    print("Generated SQL Query:\n", generated_sql_query)
-    if "terminate-flow" not in str(generated_sql_query).lower():
-        # Step 4: Execute the SQL query (Agent B)
-        execution_result = code_executor.execute_sql_query(generated_sql_query)
-        # print("Execution Result:\n", execution_result)
-
-        # Step 5: Generate insights from the execution result (Agent C)
-        insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
-        # print("Insight:\n", insight)
-
-        return insight
-    else:
-        return generated_sql_query
-
-# Get database schema
-def get_db_schema(db_connection):
-    cursor = db_connection.cursor()
-    cursor.execute("PRAGMA table_info(dataTable);")
-    schema_info = cursor.fetchall()
-    db_info = "\n".join([f"Column: {col[1]}, Type: {col[2]}" for col in schema_info])
-    
-    return db_info
-
-
-def bot_response(prompt, language='English'):
-    
-    chat_completion = client.chat.completions.create(
-        messages=[{'role': 'system', 'content': f'You are a Real Estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
-                {"role": "user", "content": prompt}],
-        model="llama-3.3-70b-versatile", # "llama-3.2-90b-vision-preview",
-        temperature=0,
-        max_tokens=1024,
-    )
-    return chat_completion.choices[0].message.content.strip()
-
-def prompt_creation(user_query, history):
-    prompt = f"""You are an honest, persuasive, and dedicated Real-Estate agent AI assistant. Your first task is to identify the user defined criteria or preferences like location, budget, property type, etc. But you should not bore the user by so many follow up questions. 
-
-    # Please follow below guidelines strictly:
-    1. Always carefully analyze both the `conversation history` and the `current user query`.
-    2. Use context from the conversation history to avoid redundant information and offer smooth, follow-up answers.
-    3. Before recommending any properties, ensure that essential user details are gathered by checking the following checklist in the conversation history:
-        - Always begin the conversation by asking the user for their name to address them in future responses. If the user is not comfortable sharing their name, proceed without insisting and move on to assist them with their query.
-        - Always ask the user to provide their specific property preferences in a single question. Include the following details: location, price range, type of property (e.g. apartment, house, commercial), and any other important criteria they may have for the property search.
-    4. Always review the Conversation History to determine if the user's property preferences have already been collected. If they have, respond with the exact phrase 'TERMINATE FLOW' and avoid asking the user for their preferences again.
-    5. If any of these details are missing, initiate a friendly dialogue to collect the missed information.
-    6. Do not immediately answer property-specific questions without establishing a foundation of user preferences for a more tailored response.
-    7. Use collected details to enhance the relevance and personalization of answers.
-    8. For questions unrelated to real estate, respond courteously and guide users back to relevant topics.
-    9. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
-    10. After collecting the user's property preferences, confirm the preferences with the user explicitly. Once the user confirms, respond only with the exact phrase 'TERMINATE FLOW' and nothing else. Do not include any additional text, explanation, or response.
-
-    Example:
-    User: Good morning!
-    Assistant: Good morning! How can I assist you with your property search today?
-    User: Hi
-    Assistant: Hello! How can I help you get your desired properties?
-    User: Hi, I would like to see some of the properties.
-    Assistant: Certainly! Before we proceed, may I have your name?
-
-    Conversation History: {history}
-    User: {user_query}
-    Assistant:
-    """
-    
-    return prompt
 
 
 def refine_question(history,user_query):
-    history.append({'role': 'user', 'content': user_query})
-    prompt=f"""You are a Real Estate helpful assistant who helps user to recommend best properties based on user property preferences. Your task is to refine the final user query based on the conversation history given below: 
-    1. Always write the final refine query in english language.
-    2. Final refined query must contain all user defined criteria of property preferences from conversation history given.
+    
+#     history.append({'role': 'user', 'content': user_query})
+    
+    prompt=f"""You are a Real Estate helpful assistant who helps user to recommend best properties based on user property preferences. Your task is to write the final user refined query based on the user conversation history and current user input. 
+    
+    Instructions:
+    1. Always write the final query in english language.
+    2. In final query must contain all user defined criteria of property preferences from conversation history given and final user input.
     3. The final output must be the final refined query. Do not add any extra text.
+    
+    # Below is the user conversational history:
+    {str(history)}
+    
+    user input:{user_query}
+    refine query:
     """
     chat_completion = client.chat.completions.create(
-        messages=[{'role': 'system', 'content': prompt},
-                {"role": "user", "content": str(history)}],
+        messages=[{'role': 'system', 'content': "You are a Real Estate helpful assistant"},
+                {"role": "user", "content": prompt}],
         model="llama-3.2-90b-vision-preview",
         temperature=0,
         max_tokens=1024,
@@ -245,11 +185,108 @@ def refine_question(history,user_query):
 
 
 
-def chat(user_query, history):
+# Main Logic
+# def main(user_query, csv_file_path, sqlite_db_path,chat_language):
+#     # Step 1: Convert CSV to SQLite
+#     db_connection, sample_records = csv_to_sqlite(csv_file_path, sqlite_db_path)
+#     print(sample_records)
+#     # Step 2: Get database schema (tables and column info)
+#     db_info = get_db_schema(db_connection)
+#     print("database info: \n", db_info)
+#     # Initialize agents
+#     code_generator = CodeGeneratorAgent(llm=model)
+#     code_executor = CodeExecutorAgent(db_connection=db_connection)
+#     insight_generator = InsightGeneratorAgent(llm=model)
 
-    res = bot_response(prompt_creation(user_query, history), language='Arabic')
-    response=res.replace('"',"")
-    # if "terminate flow" in response.lower():
+#     # Step 3: Generate SQL Query (Agent A)
+#     generated_sql_query = code_generator.generate_sql_query(query=user_query, db_info=db_info, sample_records=sample_records)
+#     print("Generated SQL Query:\n", generated_sql_query)
+#     if "terminate-flow" not in str(generated_sql_query).lower():
+#         # Step 4: Execute the SQL query (Agent B)
+#         execution_result = code_executor.execute_sql_query(generated_sql_query)
+#         # print("Execution Result:\n", execution_result)
 
-    return res
+#         # Step 5: Generate insights from the execution result (Agent C)
+#         insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
+#         # print("Insight:\n", insight)
+
+#         return insight
+#     else:
+#         return generated_sql_query
+
+filter_data=[]
+
+def assistant_chat():
+    chat_history = []
+    chat_language = "english"  # Default language for simplicity
+
+    while True:
+        # Simulate user input
+        user_query = input("You: ")
+        if user_query.lower() == "exit":
+            print("Conversation terminated.")
+            break
+        
+        if len(filter_data)==0:
+            # Generate response
+            response = Decision_Agent(user_query, chat_history)
+
+            response = ast.literal_eval(response)
+            print(response)
+            print(f"Bot: {response['Response']}")
+
+        if response['SQL_QUERY'].lower()== "yes":
+            print("Processing terminate flow logic...")
+            # response = response['Response'].lower().replace("terminate flow", "").strip().capitalize()
+            refined_user_query = refine_question(chat_history, user_query)
+            print(f"Refined Query: {refined_user_query}")
+            code_generator = CodeGeneratorAgent(llm=model)
+            code_executor = CodeExecutorAgent()
+            insight_generator = InsightGeneratorAgent(llm=model)
+            # Step 3: Generate SQL Query (Agent A)
+            generated_sql_query = code_generator.generate_sql_query(query=refined_user_query, dict_prompt=dict_prompt)
+            print("Generated SQL Query:\n", generated_sql_query)
+
+            # Step 4: Execute the SQL query (Agent B)
+            execution_result = code_executor.execute_sql_query(generated_sql_query)
+            filter_data.append(execution_result)
+            print("--------------------------------------")
+            print(execution_result)
+            
+            # Step 5: Generate insights from the execution result (Agent C)
+            insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
+            print("Generated insight:",insight)
+            response['Response']=insight
+
+        # Update chat history
+        chat_history.append({"user": user_query, "bot": response['Response']})
+        
+
+def Decision_Agent(user_query, language='English', history=None):
+    # if history:
+    prompt = f"""You are an honest, persuasive, and dedicated Real-Estate agent AI assistant. Your task is to continue the ongoing conversation with the user regarding the property selection or recommendation or both.
     
+    Conversation History: {history}
+    User Query: {user_query}
+    Based on this conversation history (if any) and current user query, you must follow below guidelines strictly:
+    1. Always carefully analyze both the `Conversation History` and the `User Query`. As conversation history may contain the already recommended properties.
+    2. Always review the Conversation History to determine if the user's property preferences (location, budget, property type, etc.) have already been collected. If Yes, avoid asking the user any follow up question for their preferences again.
+    3. If any of these details for user's property preferences are missing, response in a friendly dialogue to collect the missed information.
+    4. Use context from the Conversation History to avoid redundant information and offer smooth, follow-up answers.
+    5. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
+    
+    YOU MUST GENERATE RESPONSE IN JSON FORMAT AS FOLLOWS:
+    {{"SQL_QUERY": "BOOLEAN YES OR NO | 'YES' if conversation history and current User Query can be transformed to SQL Query else 'NO'",
+      "Response": "Your response to the conversation or initiating the conversation"}}
+
+    THERE GENERATED RESPONSE MUST ALWAYS BE IN JSON AS DESCRIBED ABOVE WITH NO TAGS, EXPLANATION, ETC.
+    
+    """
+    chat_completion = client.chat.completions.create(
+        messages=[{'role': 'system', 'content': f'You are a Real Estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
+                {"role": "user", "content": prompt}],
+        model="llama-3.3-70b-versatile", # "llama-3.2-90b-vision-preview",
+        temperature=0,
+        max_tokens=1024,
+    )
+    return chat_completion.choices[0].message.content.strip()
