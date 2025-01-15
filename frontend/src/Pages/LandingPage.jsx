@@ -22,7 +22,8 @@ export default function App() {
   const [messages, setMessages] = useState([{text: "Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!", isUser: false, isLoading: false}]);
   const [isChat, setIsChat] = useState(false);
   const [inputValue, setInputValue] = useState("");
-  const [convHistory,setConvHistory] = useState([{role: 'assistant', content:"Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"}])
+  const [convHistory,setConvHistory] = useState([{role: 'assistant', content:{SQL_QUERY:'No',Response:"Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"}}])
+  // [{"role":"assistent", "content": {"SQL_QUERY":"No","Response":insight}}, {"role":"user", "content": {"SQL_QUERY":"No","Response":user_input}} ]
 
   const [language,setLanguage] = useState('English')
 
@@ -68,7 +69,7 @@ export default function App() {
       ...prev,
       { text: inputValue, isUser: true, isLoading: false },
     ]);
-    setConvHistory((prev)=>[...prev,{role: 'user', content: inputValue}])
+    setConvHistory((prev)=>[...prev,{role: 'user', content:{SQL_QUERY:"No",Response: inputValue} }])
     const tempMessage = { text: "", isUser: false, isLoading: true }
     setMessages((prev) => [
       ...prev,
@@ -81,14 +82,15 @@ export default function App() {
        setMessages((prev) => {
       const updatedMessages = [...prev];
       updatedMessages[updatedMessages.length - 1] = {
-        text: data,
+        // SQL_QUERY:data.SQL_QUERY,
+        text: data.Response,
         isUser: false,
         isLoading: false,
       };
       return updatedMessages;
     });
 
-    setConvHistory((prev)=>[...prev,{role: 'assistant', content: data}])
+    setConvHistory((prev)=>[...prev,{role: 'assistant', content:{SQL_QUERY:data.SQL_QUERY,Response: data.Response}}])
 
     } catch (error) {
       console.log(error.message || 'something went wrong')
