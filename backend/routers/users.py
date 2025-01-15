@@ -33,7 +33,7 @@ async def assistant_chat(response:ChatResponse):
     print("------------------------------------------------------------")
     print(chat_history)
     print("-----------------------------------------------------------")
-    flag_list=["Yes" for i in chat_history[1:] if i['SQL_QUERY']=="Yes"]
+    flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
     flag=len(flag_list)==0
 
     if flag: # True
