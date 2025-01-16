@@ -53,7 +53,8 @@ class CodeGeneratorAgent:
                     4. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     5. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     6. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
-                    7. Do not mention SELECT * everytime. Instead, include only the columns necessary to provide the information requested in the user query.
+                    7. Do not mention SELECT * everytime. But, Along with project information also return some important unit level information like apartment_area_meter, living_area,floor,bathroom_count,apartment_type_eng,number_of_rooms,master_bedroom_size,living_room_size,kitchen_size,guestroom_size,	apartment_for_sakani_beneficiary,apartment_for_non_sakani_beneficiary,	construction_status_eng etc.
+
                     8. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
                     """,
                 ),
@@ -96,12 +97,14 @@ class InsightGeneratorAgent:
                     (
                         "system",
                         """
-                        You are a real estate assistant with ENGLISH native language for converting the result into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
+                        You are a real estate sales person with ENGLISH native language for converting the result into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
 
                         # Use below instruction to generate the final response:
-                        1. Use bullet point to show the recommendations.
-                        2. Include only user specific property preferences like location, price range, type of property in final recommendations until user not ask specifically.
-
+                        1. Refer to the given data and SQL query, and convert them into a natural language response as if you were explaining the project to a client.
+                        2. If there are duplicate project names consolidate the details into a single explanation to provide a clear and concise description of the project.
+                        3. If the Execution Result is empty apologize and mention: I'm sorry, I did not find a proper match as per your preferences.
+                        4. Do not say 'Based on your query'; instead, use 'Based on your requirements.'
+                        
                         user query: {user_query}
                         sql query: {sql_query}
                         Execution Result: {execution_result}
