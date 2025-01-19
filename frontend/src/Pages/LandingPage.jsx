@@ -13,6 +13,8 @@ import { ArrowUpRight, MessageSquareDiff, Send, SendHorizontal, Turtle } from "l
 import { FiSend } from "react-icons/fi";
 
 import { useState } from "react";
+import MapContainer from "@/components/MapContainer";
+import RecommenderComponent from "@/components/RecommenderComponent";
 
 export default function App() {
 
@@ -20,13 +22,15 @@ export default function App() {
 
   const [isFocused, setIsFocused] = useState(false);
   const [messages, setMessages] = useState([{text: "Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!", isUser: false, isLoading: false}]);
-  const [isChat, setIsChat] = useState(false);
+  const [isChat, setIsChat] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const [convHistory,setConvHistory] = useState([{role: 'assistant', content:{SQL_QUERY:'No',Response:"Hi, I’m your smart real estate companion, here to find your perfect property and answer all your real estate questions!"}}])
   // [{"role":"assistent", "content": {"SQL_QUERY":"No","Response":insight}}, {"role":"user", "content": {"SQL_QUERY":"No","Response":user_input}} ]
-
+const {showRecommendation,setShowRecommendation,latLongDetails,setLatLongDetails} = useAppStore()
   const [language,setLanguage] = useState('English')
+  
 
+ 
 
   const examples = [
     {
@@ -64,6 +68,12 @@ export default function App() {
     if (!isChat) {
       setIsChat(true);
     }
+
+    // dummy displayer of recommended sections
+    if(inputValue==='show recommendation'){
+      setShowRecommendation(!showRecommendation)
+    }
+
     // Add user message
     setMessages((prev) => [
       ...prev,
@@ -79,6 +89,14 @@ export default function App() {
     try {
      const data =   await chatService(inputValue,convHistory,language)
      console.log(data)
+     if(data.lat_long_details_list){
+      setLatLongDetails(data.lat_long_details_list)
+      setShowRecommendation(true)
+     }
+
+    //  dummy data for the locations that will eventually get from backend
+    setLatLongDetails( [{'project_id': 15, 'Project URL': 'https://sakani.sa/app/offplan-projects/15', 'project_name_eng': 'Abha - Ali Shar - Abha Hills', project_latitude: 18.286109, project_longitude: 42.513347}])
+
        setMessages((prev) => {
       const updatedMessages = [...prev];
       updatedMessages[updatedMessages.length - 1] = {
@@ -132,18 +150,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-r from-slate-900 to-slate-700 text-white relative overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-r from-slate-900 to-slate-700 text-white flex relative overflow-hidden">
       <BackgroundIcons />
       {/* Main Content */}
       <div className="container mx-auto  px-4 py-20 relative z-10">
       <div className={`chat-wrapper ${isChat ? "flex flex-col " : ""}`}>
     {isChat ? (
+      
       <div className="h-[65vh] overflow-hidden rounded-xl max-w-3xl md:max-w-4xl w-full mx-auto">
       
         <ChatContainer messages={messages} />
       </div>
+     
+  
     ) : (
+      <>
       <HeroSection />
+      {/* <MapContainer locations={locations}  /> */}
+      </>
     )}
   </div>
 
@@ -231,6 +255,12 @@ export default function App() {
           Loved by 30 million software creators, including teams at:
         </div> */}
       </div>
+
+        <div>
+           { showRecommendation&&<RecommenderComponent/>}
+        </div>
+
+
     </div>
   );
 }
