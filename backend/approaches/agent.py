@@ -54,7 +54,7 @@ class CodeGeneratorAgent:
                     5. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     6. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     7. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
-                    8. Do not mention SELECT * everytime. But, Along with project information also return some important unit level information like apartment_area_meter, living_area,floor,bathroom_count,apartment_type_eng,number_of_rooms,master_bedroom_size,living_room_size,kitchen_size,guestroom_size,	apartment_for_sakani_beneficiary,apartment_for_non_sakani_beneficiary,	construction_status_eng etc.
+                    8. Do not mention SELECT * everytime. But, Along with project information also return some important unit level information like Apartment_code,apartment_area_meter, living_area,floor,bathroom_count,apartment_type_eng,number_of_rooms,master_bedroom_size,living_room_size,kitchen_size,guestroom_size,apartment_for_sakani_beneficiary,apartment_for_non_sakani_beneficiary,construction_status_eng etc.
                     9. Always apply the `DISTINCT` clause to `project_id` column to ensure duplicate values are excluded.
                     10. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
                     """,
@@ -81,25 +81,34 @@ class CodeExecutorAgent:
             # cursor.execute(sql_query)
             # result = cursor.fetchall()  # Fetch all results from the query execution
             result = pd.read_sql_query(sql_query, self.db_connection)
-
+            print("-------------------recommendation data----------------------------")
+            print(result)
             if "project_id" in result.columns:
                 project_id=tuple(result['project_id'].to_list())
-                project_query=f"select DISTINCT project_id,[Project URL],project_name_eng,project_latitude,project_longitude from real_estate where project_id in {project_id}"
-                cursor = self.db_connection.cursor()
-                cursor.execute(project_query)
-                lat_long_details = cursor.fetchall() 
-                lat_long_details_list=[]
-                for project in lat_long_details:
-                    lat_long_details_dict={"project_id":project[0],
-                                        "Project URL":project[1],
-                                        "project_name_eng":project[2],
-                                        "project_latitude":project[3],
-                                    "project_longitude":project[4] }
-                    lat_long_details_list.append(lat_long_details_dict)
+                if str(project_id)[-2]==",":
+                    project_id=str(project_id)[:-2]+")"
+                print("-------------------Project ids----------------------------")
+                print(project_id)
+                if len(project_id)>0:
+                    project_query=f"select DISTINCT project_id,[Project URL],project_name_eng,project_latitude,project_longitude from real_estate where project_id in {project_id}"
+                    cursor = self.db_connection.cursor()
+                    cursor.execute(project_query)
+                    lat_long_details = cursor.fetchall() 
+                    lat_long_details_list=[]
+                    for project in lat_long_details:
+                        lat_long_details_dict={"project_id":project[0],
+                                            "Project URL":project[1],
+                                            "project_name_eng":project[2],
+                                            "project_latitude":project[3],
+                                        "project_longitude":project[4] }
+                        lat_long_details_list.append(lat_long_details_dict)
+                else:
+                    lat_long_details_list=""
+            else:
+                lat_long_details_list=""
 
-                print("--------------------------lat_long_details_dict------------------------")
-                print(lat_long_details_list)
-
+            print("--------------------------lat_long_details_dict------------------------")
+            print(lat_long_details_list)
             result=result.to_csv(index=False)
             return result, lat_long_details_list
         # except Exception as e:

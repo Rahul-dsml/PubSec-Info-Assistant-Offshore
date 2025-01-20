@@ -37,12 +37,14 @@ async def assistant_chat(response:ChatResponse):
             chat['content'] = chat['content']['Response']
             if "lat_long_details_list" in chat:
                 del chat["lat_long_details_list"]
+
     print("------------------------------------------------------------")
     print(chat_history)
     print("-----------------------------------------------------------")
     if flag: # True
         response = Decision_Agent(user_query=user_query, language=chat_language,history=chat_history)
         response = ast.literal_eval(response)
+        # response["data"]="NA"
         print("--------------------------------------------------------")
 
         # print(chat_history)
