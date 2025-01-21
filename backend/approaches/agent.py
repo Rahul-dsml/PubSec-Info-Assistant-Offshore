@@ -2,17 +2,15 @@ from groq import Groq
 import os
 import sqlite3
 import pandas as pd
+from utility.chat_helper import DataDictionaryPrompt
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-from utility.chat_helper import DataDictionaryPrompt
 from dotenv import load_dotenv
 import json
 import ast
 
 
 load_dotenv()
-
-
 
 
 client = Groq(
@@ -26,7 +24,7 @@ model = ChatGroq(
     max_tokens=None,
     timeout=None,
     max_retries=2,
-    api_key="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"
+    api_key="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"
     # other params...
 )
 
@@ -54,7 +52,7 @@ class CodeGeneratorAgent:
                     5. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     6. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     7. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
-                    8. Do not mention SELECT * everytime. But, Along with project information also return some important unit level information like Apartment_code,apartment_area_meter, living_area,floor,bathroom_count,apartment_type_eng,number_of_rooms,master_bedroom_size,living_room_size,kitchen_size,guestroom_size,apartment_for_sakani_beneficiary,apartment_for_non_sakani_beneficiary,construction_status_eng etc.
+                    8. Do not mention SELECT * everytime. Based on user intent retrieve the all required important information from the data.
                     9. Always apply the `DISTINCT` clause to `project_id` column to ensure duplicate values are excluded.
                     10. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
                     """,
@@ -73,7 +71,7 @@ class CodeGeneratorAgent:
 # Code Executor Agent (SQL Query Executor)
 class CodeExecutorAgent:
     def __init__(self):
-        self.db_connection = sqlite3.connect("real_estate.db")
+        self.db_connection = sqlite3.connect(r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\real_estate.db")
 
     def execute_sql_query(self, sql_query):
         # try:

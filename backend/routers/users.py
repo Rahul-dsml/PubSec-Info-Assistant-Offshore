@@ -30,6 +30,7 @@ async def assistant_chat(response:ChatResponse):
     chat_language=response.chat_language
     dict_obj=DataDictionaryPrompt()
     dict_prompt=dict_obj.get_prompt()
+
     flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
     flag=len(flag_list)==0
     for chat in chat_history:
@@ -39,7 +40,7 @@ async def assistant_chat(response:ChatResponse):
                 del chat["lat_long_details_list"]
 
     print("------------------------------------------------------------")
-    print(chat_history)
+    print(dict_prompt)
     print("-----------------------------------------------------------")
     if flag: # True
         response = Decision_Agent(user_query=user_query, language=chat_language,history=chat_history)

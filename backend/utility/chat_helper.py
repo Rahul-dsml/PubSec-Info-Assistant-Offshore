@@ -18,19 +18,15 @@ def csv_to_sqlite(csv_file_path, sqlite_db_path):
 class DataDictionaryPrompt():
 
     def __init__(self,) -> None:
-        # self.file_path=st.secrets.file.file_path or os.getenv('file_path')
-        # self.sheet_name=st.secrets.file.sheet_name or os.getenv('sheet_name')
-        self.dict_file_path="Data_Dictionary_v2.xlsx"
-        
+        self.sqllite_db_path=r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\real_estate.db"
+       
     def __get_data_dict(self):
         try:
             # Load the Excel sheet into a pandas DataFrame
-            df = pd.read_excel(self.dict_file_path)
-            df=df.reset_index()
-            df=df.rename({"index":"col_id","Field Name":"column_name","Data Type":"col_dtype","Description":"col_desc"},axis=1)
+            df = pd.read_excel(r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\Data_Dictionary_v3.xlsx",sheet_name="dict2")
+            # print(df)
             # Create an in-memory SQLite database
-            # conn = sqlite3.connect(":memory:")
-            conn = sqlite3.connect("real_estate.db")
+            conn = sqlite3.connect(self.sqllite_db_path)
 
             # Load the DataFrame into the SQLite database
             df.to_sql("dict_data", conn, index=False, if_exists="replace")
@@ -49,16 +45,15 @@ class DataDictionaryPrompt():
             # Close the database connection
             conn.close()
 
-    def __get_top3(self):
+    def __get_top3(self,table_name):
         try:
             # Load an SQLite database
-            conn = sqlite3.connect("real_estate.db")
+            conn = sqlite3.connect(self.sqllite_db_path)
             
-            query="""select * from real_estate limit 3"""
+            query=f"""select * from {table_name} Limit 3"""
 
             # Execute the SQL query
             top_df = pd.read_sql_query(query, conn)
-           
 
             return top_df  # Return the DataFrame with query results
 
@@ -70,30 +65,41 @@ class DataDictionaryPrompt():
             conn.close()
 
     def __get_table_details_with_columns(self):
+
         column_details=self.__get_data_dict()
-        top_3=self.__get_top3()
+        
         # Initialize a structure to hold the combined result
+        table_details={1:{"table_name":"project_details","table_desc":"""The `Project_Details` table provides project-level information, including project identifiers, location details (city, region, latitude, longitude), construction status, pricing information for Sakani and non-Sakani beneficiaries, and available payment options. It also captures minimum and maximum ranges for unit dimensions and features within the project.""" },
+        2:{"table_name":"unit_details","table_desc":"""The Unit_Details table contains information about individual apartment units within real estate projects, including attributes such as unique apartment identifiers, project associations, physical dimensions (e.g., area, room sizes), and specifications like floor number, number of rooms, and apartment type."""}
+        }
         result = []
-        table_id = "1"
-        table_name="real_estate"
-        table_desc="""The real_estate table provides detailed information about real estate projects and units, including project details, location, pricing, availability, and construction status. It tracks unit-level attributes such as size, floor, number of bedrooms and bathrooms, and pricing details for beneficiaries and non-beneficiaries. The table also includes metadata like construction completion percentage, payment options, and platform accessibility (web/mobile)."""
-        print("Table Name ::", table_name ,"ID ::",table_id)
-        # Append the table details and its columns to the result
-        result.append({
-            "table_id": table_id,
-            "table_name":table_name,
-            "table_desc": table_desc,
-            "top-3":top_3.to_csv(index=False),
-            "columns": [
-                {
-                    "col_id": column["col_id"],
-                    "col_name": column["column_name"],
-                    "col_type": column['col_dtype'],
-                    "col_desc": column["col_desc"]
-                }
-                for column in column_details
-            ]
-        })
+        table_ids=[1,2]
+        # print(column_details)
+        for table_id in table_ids:
+            # print(table_id)
+            table_name= table_details[table_id]["table_name"]
+            table_desc=table_details[table_id]["table_desc"]
+
+            print("Table Name ::", table_name,"ID ::",table_id)
+
+            top_3=self.__get_top3(table_name)
+
+            # Append the table details and its columns to the result
+            result.append({
+                "table_id": table_id,
+                "table_name":table_name,
+                "table_desc": table_desc,
+                "top-3":top_3.to_csv(index=False),
+                "columns": [
+                    {
+                        "col_id": column["column_id"],
+                        "col_name": column["column_name"],
+                        "col_type": column['dtypes'],
+                        "col_desc": column["column_desc"]
+                    }
+                    for column in column_details if column["table_id"]==table_id
+                ]
+            })
         
         return json.dumps(result)
 
@@ -101,8 +107,8 @@ class DataDictionaryPrompt():
         data_dictionary=self.__get_table_details_with_columns()
         data_dictionary_prompt = ''
         for table in json.loads(data_dictionary):
-            data_dictionary_prompt += f"# Table Name:{table['table_name']}\n# Table Description:{table['table_desc']}"
-            data_dictionary_prompt += "\n\n# Columns(with data type and description):\n"
+            data_dictionary_prompt += f"Table Name:{table['table_name']}\nTable Description:{table['table_desc']}"
+            data_dictionary_prompt += "\nColumns(with data type and description):\n"
             for column in table['columns']:
                 data_dictionary_prompt += f"{column['col_name']} ({column['col_type']}) : {column['col_desc']}\n"
             data_dictionary_prompt += f"""\n/* \n3 rows from {table['table_name']} table:\n"""
