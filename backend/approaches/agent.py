@@ -46,15 +46,16 @@ class CodeGeneratorAgent:
                     
                     Instructions:
                     1. Use SQL dialect -> {dialect} when writing SQL queries.
-                    2. Review the user's query thoroughly to understand its intent. Carefully verify the table names and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
+                    2. Review the user's query thoroughly to understand its intent. Carefully verify the tables names and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
                     3. Always use `sakani_beneficiary_price` by default unless the user specifies otherwise.
-                    4. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
-                    5. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
-                    6. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    4. Always use the `project_details` table to provide high-level project information. Refer to the `unit_details` table only when the user specifically requests unit-level details.
+                    5. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
+                    6. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     7. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
                     8. Do not mention SELECT * everytime. Based on user intent retrieve the all required important information from the data.
-                    9. Always apply the `DISTINCT` clause to `project_id` column to ensure duplicate values are excluded.
-                    10. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
+                    10. Always apply the `DISTINCT` clause to `project_id` column to ensure duplicate values are excluded.
+                    11. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
+                    12. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     """,
                 ),
                 ("human", "User Query: {query}"),
@@ -132,7 +133,8 @@ class InsightGeneratorAgent:
                         1. Refer to the given data and SQL query, and convert them into a natural language response as if you were explaining the project to a client.
                         2. If there are duplicate project names consolidate the details into a single explanation to provide a clear and concise description of the project.
                         3. If the Execution Result is empty apologize and mention: I'm sorry, I did not find a proper match as per your preferences.
-                        4. Do not say 'Based on your query'; instead, use 'Based on your requirements.'
+                        4. Always provide the project level recommendations saying the 1st project , 2nd project etc.
+                        5. Do not say 'Based on your query'; instead, use 'Based on your requirements.'
                         
                         user query: {user_query}
                         sql query: {sql_query}
