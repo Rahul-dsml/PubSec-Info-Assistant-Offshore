@@ -39,21 +39,22 @@ class CodeGeneratorAgent:
                 (
                     "system",
                     """
-                    You are an expert DATA ANALYST in Real Estate domain. You have access to a database and the capability to interact with the database and write SQL queries.
+                    You are a specialized real estate assistant . You have access to a database and the capability to interact with the database and write SQL queries.
                     The database contains two tables - project_details and unit_details for which details along with column descriptions/schema is as below:
                     ```{db_info}```
                     
                     Instructions:
                     1. Use SQL dialect -> {dialect} when writing SQL queries.
                     2. Review the user's query thoroughly to understand its intent. Carefully verify the tables and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
-                    3. Use 'project_details' table to give the high level overview regarding the projects. Limit the columns related to location, price range and number of apartments available in the respective project.
-                    4. If user's intent is to get detailed information regarding apartments/villas/townhouses in the projects, always join both tables on 'project_id' column.
-                    5. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
-                    6. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
-                    7. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
-                    8. Do not mention SELECT * everytime. Based on user intent retrieve the all required important information from the data.
-                    9. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
-                    10. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    3. Use 'project_details' table to give the high level overview regarding the projects like location, max or min price range, area etc available in the respective project.
+                    4. To filter the project based on the budget using the minimum and maximum prices from the project_details table
+                    5. If user's intent is to get detailed information regarding the specific apartments/villas/townhouses in the projects, always join both tables on 'project_id' column. and retrive the information based on user intent.
+                    6. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
+                    7. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
+                    8. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
+                    9. Do not mention SELECT * everytime. Based on user intent retrieve the all required important information from the data.
+                    10. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
+                    11. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     """,
                 ),
                 ("human", "User Query: {query}"),
@@ -72,7 +73,7 @@ class CodeGeneratorAgent:
 # Code Executor Agent (SQL Query Executor)
 class CodeExecutorAgent:
     def __init__(self):
-        self.db_connection = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\backend\real_estate.db")
+        self.db_connection = sqlite3.connect( "real_estate.db")
         # self.db_connection = sqlite3.connect(os.getenv("DB_PATH"))
 
     def execute_sql_query(self, sql_query):
@@ -128,8 +129,7 @@ class InsightGeneratorAgent:
                     (
                         "system",
                         """
-                        You are a very helpful, engaging and friendly real estate sales person with ENGLISH native language whose main task is to keep user engaged and help him/her in buying best property.
-                        Your task is to convert the results into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
+                        You are a very helpful, engaging and friendly specialized real estate sales assistant with ENGLISH native language. Your role is to help users find the perfect home and is to convert the results into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
 
                         # Use below instruction to generate the final response:
                         1. Refer to the given data and SQL query, and convert them into a natural language response as if you were explaining the project to a client.
@@ -200,6 +200,7 @@ def refine_question(history,user_query):
     1. Always write the final query in english language.
     2. In final query must contain all user defined criteria of property preferences from conversation history given and final user input.
     3. The final output must be the final refined query. Do not add any extra text.
+    4. Ensure all responses are relevant to real estate and property management. Do not respond to questions outside the real estate domain.
     
     # Below is the user conversational history:
     {str(history)}
