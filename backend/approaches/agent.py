@@ -39,23 +39,21 @@ class CodeGeneratorAgent:
                 (
                     "system",
                     """
-                    You are an expert DATA ANALYST for Real Estate. You have access to a database and the capability to interact with the database and write SQL queries.
-                    
-                    You can find the table and column descriptions/schema below:
-                    {db_info}
+                    You are an expert DATA ANALYST in Real Estate domain. You have access to a database and the capability to interact with the database and write SQL queries.
+                    The database contains two tables - project_details and unit_details for which details along with column descriptions/schema is as below:
+                    ```{db_info}```
                     
                     Instructions:
                     1. Use SQL dialect -> {dialect} when writing SQL queries.
-                    2. Review the user's query thoroughly to understand its intent. Carefully verify the tables names and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
-                    3. Always use `sakani_beneficiary_price` by default unless the user specifies otherwise.
-                    4. Always use the `project_details` table to provide high-level project information. Refer to the `unit_details` table only when the user specifically requests unit-level details.
+                    2. Review the user's query thoroughly to understand its intent. Carefully verify the tables and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
+                    3. Use 'project_details' table to give the high level overview regarding the projects. Limit the columns related to location, price range and number of apartments available in the respective project.
+                    4. If user's intent is to get detailed information regarding apartments/villas/townhouses in the projects, always join both tables on 'project_id' column.
                     5. THE GENERATED SQL QUERY MUST ALIGN WITH THE USER'S QUERY BASED ON THE SCHEMA PROVIDED ABOVE.
                     6. ALWAYS LIMIT THE SQL QUERY TO LIMIT 5.
                     7. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
                     8. Do not mention SELECT * everytime. Based on user intent retrieve the all required important information from the data.
-                    10. Always apply the `DISTINCT` clause to `project_id` column to ensure duplicate values are excluded.
-                    11. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
-                    12. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
+                    9. Ensure that all filters and conditions derived from the user's query are properly included within the SQL query.
+                    10. THE RESPONSE MUST BE STRICTLY ONLY THE SQL QUERY. DO NOT INCLUDE ANY TAGS LIKE ```sql``` OR ANY SORT OF EXPLANATIONS. JUST QUERY, AS IT WILL BE DIRECTLY USED IN SQL QUERY ENGINE.
                     """,
                 ),
                 ("human", "User Query: {query}"),
@@ -69,10 +67,13 @@ class CodeGeneratorAgent:
                                  "query": query})
         return response.content.strip()  # Remove extra whitespace or newlines
 
+
+
 # Code Executor Agent (SQL Query Executor)
 class CodeExecutorAgent:
     def __init__(self):
-        self.db_connection = sqlite3.connect(r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\real_estate.db")
+        self.db_connection = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\backend\real_estate.db")
+        # self.db_connection = sqlite3.connect(os.getenv("DB_PATH"))
 
     def execute_sql_query(self, sql_query):
         # try:
@@ -127,14 +128,16 @@ class InsightGeneratorAgent:
                     (
                         "system",
                         """
-                        You are a real estate sales person with ENGLISH native language for converting the result into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
+                        You are a very helpful, engaging and friendly real estate sales person with ENGLISH native language whose main task is to keep user engaged and help him/her in buying best property.
+                        Your task is to convert the results into a natural language response to user's query. The result is from executing an SQL query on an SQLite database, and you need to generate natural language response in english language from it.
 
                         # Use below instruction to generate the final response:
                         1. Refer to the given data and SQL query, and convert them into a natural language response as if you were explaining the project to a client.
                         2. If there are duplicate project names consolidate the details into a single explanation to provide a clear and concise description of the project.
                         3. If the Execution Result is empty apologize and mention: I'm sorry, I did not find a proper match as per your preferences.
-                        4. Always provide the project level recommendations saying the 1st project , 2nd project etc.
-                        5. Do not say 'Based on your query'; instead, use 'Based on your requirements.'
+                        4. Present recommendations clearly, referring to them as "the first project," "the second project," and so on if it corresponds to only 'project_details' table else provide suitable recommendations for unit_level data.
+                        5. Do not say 'Based on your query'; instead, use 'Based on your preferences.'
+                        6. The word limit of the generated response must always be between 100 to 200 words.
                         
                         user query: {user_query}
                         sql query: {sql_query}

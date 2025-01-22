@@ -3,6 +3,10 @@ import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 import json
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 
 # Convert CSV to SQLite Database
 def csv_to_sqlite(csv_file_path, sqlite_db_path):
@@ -18,12 +22,14 @@ def csv_to_sqlite(csv_file_path, sqlite_db_path):
 class DataDictionaryPrompt():
 
     def __init__(self,) -> None:
-        self.sqllite_db_path=r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\real_estate.db"
+        self.sqllite_db_path=r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\backend\real_estate.db"
+        # self.sqllite_db_path= os.getenv("DB_PATH")
        
     def __get_data_dict(self):
         try:
             # Load the Excel sheet into a pandas DataFrame
-            df = pd.read_excel(r"D:\30. Open Source llm -RAG\PubSec-Info-Assistant-Offshore\backend\Data_Dictionary_v3.xlsx",sheet_name="dict2")
+            df = pd.read_excel(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\backend\Data_Dictionary_v3.xlsx",sheet_name="dict2")
+            # df = pd.read_excel(f"{os.getenv("DATA_PATH")}", sheet_name=os.getenv("SHEET_NAME")))
             # print(df)
             # Create an in-memory SQLite database
             conn = sqlite3.connect(self.sqllite_db_path)
