@@ -7,17 +7,21 @@ from utility.chat_helper import DataDictionaryPrompt
 from model import ChatResponse
 from langchain_groq import ChatGroq
 import ast
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 model = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="llama-3.2-90b-vision-preview", # "llama-3.3-70b-versatile",
     temperature=0.1,
     max_tokens=None,
     timeout=None,
     max_retries=2,
-    api_key="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"
+    api_key=os.getenv("GROQ_API_KEY")
     # other params...
 )
 
