@@ -20,7 +20,7 @@ class DataDictionaryPrompt():
     def __init__(self,) -> None:
         # self.file_path=st.secrets.file.file_path or os.getenv('file_path')
         # self.sheet_name=st.secrets.file.sheet_name or os.getenv('sheet_name')
-        self.dict_file_path="real_estate_data_dictionary.xlsx"
+        self.dict_file_path="Data_Dictionary_v2.xlsx"
         
     def __get_data_dict(self):
         try:

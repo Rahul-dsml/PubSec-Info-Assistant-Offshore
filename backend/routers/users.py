@@ -30,16 +30,19 @@ async def assistant_chat(response:ChatResponse):
     chat_language=response.chat_language
     dict_obj=DataDictionaryPrompt()
     dict_prompt=dict_obj.get_prompt()
+    flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
+    flag=len(flag_list)==0
+    for chat in chat_history:
+        if 'Response' in chat['content']:
+            chat['content'] = chat['content']['Response']
+            if "lat_long_details_list" in chat:
+                del chat["lat_long_details_list"]
     print("------------------------------------------------------------")
     print(chat_history)
     print("-----------------------------------------------------------")
-    flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
-    flag=len(flag_list)==0
-
     if flag: # True
         response = Decision_Agent(user_query=user_query, language=chat_language,history=chat_history)
         response = ast.literal_eval(response)
-        print(response)
         print("--------------------------------------------------------")
 
         # print(chat_history)
@@ -56,7 +59,7 @@ async def assistant_chat(response:ChatResponse):
             print("Generated SQL Query:\n", generated_sql_query)
 
             # Step 4: Execute the SQL query (Agent B)
-            execution_result = code_executor.execute_sql_query(generated_sql_query)
+            execution_result,lat_long_details_list = code_executor.execute_sql_query(generated_sql_query)
         
             print("--------------------------------------")
             print(execution_result)
@@ -64,7 +67,7 @@ async def assistant_chat(response:ChatResponse):
             # Step 5: Generate insights from the execution result (Agent C)
             insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
             print("Generated insight:",insight)
-            response={"SQL_QUERY":"Yes","Response":insight}
+            response={"SQL_QUERY":"Yes","Response":insight,"lat_long_details_list":lat_long_details_list}
             
     else:
         print("Processing terminate flow logic...")
@@ -79,16 +82,17 @@ async def assistant_chat(response:ChatResponse):
         print("Generated SQL Query:\n", generated_sql_query)
 
         # Step 4: Execute the SQL query (Agent B)
-        execution_result = code_executor.execute_sql_query(generated_sql_query)
+        execution_result,lat_long_details_list = code_executor.execute_sql_query(generated_sql_query)
         print("--------------------------------------")
         print(execution_result)
         
         # Step 5: Generate insights from the execution result (Agent C)
         insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
         print("Generated insight:",insight)
-        response={"SQL_QUERY":"Yes","Response":insight}
+        response={"SQL_QUERY":"Yes","Response":insight,"lat_long_details_list":lat_long_details_list}
 
-
+    print("-----------------------Final Response------------------------")
+    print(response)
     return JSONResponse(content=response, status_code=200)
     # print("User Question ::",user_query)
     # print("Chat History ::",chat_history)
