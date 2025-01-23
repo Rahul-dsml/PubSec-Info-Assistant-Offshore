@@ -9,7 +9,7 @@ FROM python:3.10.7
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-COPY ./backend
+COPY ./backend /app/
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
