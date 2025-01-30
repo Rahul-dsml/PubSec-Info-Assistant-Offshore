@@ -1,15 +1,22 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
-from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends,APIRouter
 from fastapi.responses import JSONResponse
-from approaches.agent import  refine_question,CodeGeneratorAgent,CodeExecutorAgent,InsightGeneratorAgent,Decision_Agent
+from utility.agents import (refine_question,
+                    CodeGeneratorAgent,
+                    CodeExecutorAgent,
+                    InsightGeneratorAgent,
+                    query_classifier)
+
 from utility.chat_helper import DataDictionaryPrompt
-# from approaches.realassistant import main
-from model import ChatResponse
+from model import ChatResponse,GetDetails
 from langchain_groq import ChatGroq
+from dotenv import load_dotenv
 import ast
+import os
+from utility.feedback_reports import Report
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+load_dotenv()
 
 model = ChatGroq(
     model="llama-3.3-70b-versatile",
@@ -17,21 +24,19 @@ model = ChatGroq(
     max_tokens=None,
     timeout=None,
     max_retries=2,
-    api_key="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"
-    # other params...
-)
-
-
+    api_key=os.getenv("GROQ_API_KEY"))
 
 @router.post("/assistant_chat/")
 async def assistant_chat(response:ChatResponse):
     user_query= response.user_query
     chat_history=response.chat_history
     chat_language=response.chat_language
+
     dict_obj=DataDictionaryPrompt()
     dict_prompt=dict_obj.get_prompt()
-    flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
-    flag=len(flag_list)==0
+
+    # flag_list=["Yes" for i in chat_history if i['content']['SQL_QUERY']=="Yes"]
+
     for chat in chat_history:
         if 'Response' in chat['content']:
             chat['content'] = chat['content']['Response']
@@ -40,60 +45,59 @@ async def assistant_chat(response:ChatResponse):
     print("------------------------------------------------------------")
     print(chat_history)
     print("-----------------------------------------------------------")
-    if flag: # True
-        response = Decision_Agent(user_query=user_query, language=chat_language,history=chat_history)
-        response = ast.literal_eval(response)
-        print("--------------------------------------------------------")
 
-        # print(chat_history)
-        if response['SQL_QUERY'].lower()== "yes":
-            print("Processing terminate flow logic...")
-            # response = response['Response'].lower().replace("terminate flow", "").strip().capitalize()
-            refined_user_query = refine_question(chat_history, user_query)
-            print(f"Refined Query: {refined_user_query}")
-            code_generator = CodeGeneratorAgent(llm=model)
-            code_executor = CodeExecutorAgent()
-            insight_generator = InsightGeneratorAgent(llm=model)
-            # Step 3: Generate SQL Query (Agent A)
-            generated_sql_query = code_generator.generate_sql_query(query=refined_user_query, dict_prompt=dict_prompt)
-            print("Generated SQL Query:\n", generated_sql_query)
+    # Generate response
+    agent = InsightGeneratorAgent(llm=model)
+    response = agent.generate_insight(user_query=user_query, 
+                                    chat_history=chat_history,
+                                    chat_language=chat_language)
+    # Parse response into dictionary
+    response = ast.literal_eval(response)
 
-            # Step 4: Execute the SQL query (Agent B)
-            execution_result,lat_long_details_list = code_executor.execute_sql_query(generated_sql_query)
-        
-            print("--------------------------------------")
-            print(execution_result)
-            
-            # Step 5: Generate insights from the execution result (Agent C)
-            insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
-            print("Generated insight:",insight)
-            response={"SQL_QUERY":"Yes","Response":insight,"lat_long_details_list":lat_long_details_list}
-            
-    else:
+    if response['SQL_QUERY'].lower() == "yes":
         print("Processing terminate flow logic...")
-        # response = response['Response'].lower().replace("terminate flow", "").strip().capitalize()
-        refined_user_query = refine_question(chat_history, user_query)
+
+        query_type = query_classifier(user_query=user_query)
+        print(query_type)
+        refined_user_query = refine_question(user_query=user_query, 
+                                            history=chat_history)
         print(f"Refined Query: {refined_user_query}")
+
+        dict_object = DataDictionaryPrompt()
+        dict_prompt = dict_object.get_prompt()
+
         code_generator = CodeGeneratorAgent(llm=model)
         code_executor = CodeExecutorAgent()
-        insight_generator = InsightGeneratorAgent(llm=model)
-        # Step 3: Generate SQL Query (Agent A)
-        generated_sql_query = code_generator.generate_sql_query(query=refined_user_query, dict_prompt=dict_prompt)
-        print("Generated SQL Query:\n", generated_sql_query)
 
-        # Step 4: Execute the SQL query (Agent B)
-        execution_result,lat_long_details_list = code_executor.execute_sql_query(generated_sql_query)
-        print("--------------------------------------")
-        print(execution_result)
-        
-        # Step 5: Generate insights from the execution result (Agent C)
-        insight = insight_generator.generate_insight(user_query=user_query, sql_query=generated_sql_query, execution_result=execution_result,chat_language=chat_language)
-        print("Generated insight:",insight)
-        response={"SQL_QUERY":"Yes","Response":insight,"lat_long_details_list":lat_long_details_list}
+        sql_query = code_generator.generate_sql_query(
+            query=refined_user_query,
+            dict_prompt=dict_prompt,
+            search_based=query_type
+        )
+        print("Generated SQL Query:")
+        print(sql_query)
 
-    print("-----------------------Final Response------------------------")
-    print(response)
+        result = code_executor.execute_sql_query(sql_query=sql_query)
+
+        print("--- Execution Results ---")
+        print(result[0])
+
+        insights = agent.generate_insight(
+            user_query=user_query, 
+            execution_result=result[0], 
+            chat_history=chat_history,
+            chat_language=chat_language)
+
+        insights = ast.literal_eval(insights)
+        response['Response'] = insights['Response']
+        print("Insights:")
+        print(insights['Response'])
+
     return JSONResponse(content=response, status_code=200)
-    # print("User Question ::",user_query)
-    # print("Chat History ::",chat_history)
-    # print("User Question ::",chat_language)
+
+@router.post("/get_details/")
+async def get_details(response:GetDetails):
+    apartment_id=response.apartment_id
+    report_obj=Report(apartment_id)
+    response=report_obj.generate_report()
+    return JSONResponse(content=response, status_code=200)
