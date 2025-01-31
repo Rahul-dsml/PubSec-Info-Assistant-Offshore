@@ -23,7 +23,7 @@ class TableDetail(BaseModel):
     columns: List[ColumnDetail]
 
 class DataDictionaryPrompt:
-    def __init__(self, excel_file_path: Optional[str] = None, sql_db: Optional[str] = None) -> None:
+    def __init__(self) -> None:
         """
         Initialize DataDictionaryPrompt with paths for the Excel file and SQLite database.
 
@@ -31,8 +31,8 @@ class DataDictionaryPrompt:
             excel_file_path (Optional[str]): The path to the Excel file (default: environment variable EXCEL_FILE_PATH).
             sql_db (Optional[str]): The path to the SQLite database (default: environment variable DATABASE_PATH).
         """
-        self.excel_file_path = excel_file_path or os.getenv("EXCEL_FILE_PATH")
-        self.sql_db = sql_db or os.getenv("DATABASE_PATH")
+        self.excel_file_path = os.getenv("EXCEL_FILE_PATH")
+        self.sql_db =  os.getenv("DATABASE_PATH")
 
     def __get_data_dict(self) -> Optional[List[dict]]:
         """

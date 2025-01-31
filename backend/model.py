@@ -7,4 +7,4 @@ class ChatResponse(BaseModel):
     chat_language : str
 
 class GetDetails(BaseModel):
-    apartment_id    : str
+    apartment_id   : str
