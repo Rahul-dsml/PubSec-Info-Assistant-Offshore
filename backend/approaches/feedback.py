@@ -1,16 +1,20 @@
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
-from dotenv import load_dotenv
+from groq import Groq
 import os
 import sqlite3
 import pandas as pd
-from groq import Groq
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
+from dotenv import load_dotenv
+import json
+import ast
 
 load_dotenv()
+
 
 client = Groq(
     api_key= os.getenv("GROQ_API_KEY"),
 )
+
 
 model = ChatGroq(
     model="llama-3.2-90b-vision-preview",# "llama-3.3-70b-versatile",
@@ -21,6 +25,138 @@ model = ChatGroq(
     api_key=os.getenv("GROQ_API_KEY")
     # other params...
 )
+def csv_to_sqlite():
+    # Load CSV into pandas DataFrame
+    df = pd.read_csv(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\df_english_v2.csv", encoding='utf-8')
+    # df = pd.read_csv()
+    # Create SQLite database and write the DataFrame to it
+    conn = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\real_estate.db")
+    df.to_sql('real_estate', conn, if_exists='replace', index=False)
+
+
+csv_to_sqlite()
+
+class DataDictionaryPrompt():
+
+    def __init__(self,) -> None:
+        # self.file_path=st.secrets.file.file_path or os.getenv('file_path')
+        # self.sheet_name=st.secrets.file.sheet_name or os.getenv('sheet_name')
+        self.dict_file_path="Data_Dictionary_v2.xlsx"
+        
+    def __get_data_dict(self):
+        try:
+            # Load the Excel sheet into a pandas DataFrame
+            df = pd.read_excel(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\Data_Dictionary_v2.xlsx")
+            df=df.reset_index()
+            df=df.rename({"index":"col_id","Field Name":"column_name","Data Type":"col_dtype","Description":"col_desc"},axis=1)
+            # Create an in-memory SQLite database
+            # conn = sqlite3.connect(":memory:")
+            conn = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\real_estate.db")
+
+            # Load the DataFrame into the SQLite database
+            df.to_sql("dict_data", conn, index=False, if_exists="replace")
+            
+            query="select * from dict_data"
+
+            # Execute the SQL query
+            df1 = pd.read_sql_query(query, conn)
+            data_dict=df1.to_dict(orient="records")
+            return data_dict  # Return the DataFrame with query results
+            
+        except Exception as e:
+            print("SQL query didn't work due to:", e)
+            return None
+        finally:
+            # Close the database connection
+            conn.close()
+
+    def __get_top3(self):
+        try:
+            # Load an SQLite database
+            conn = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\real_estate.db")
+            
+            query="""select * from real_estate limit 3"""
+
+            # Execute the SQL query
+            top_df = pd.read_sql_query(query, conn)
+           
+
+            return top_df  # Return the DataFrame with query results
+
+        except Exception as e:
+            print("Data Dictionary Prompt :: SQL query didn't work due to:", e)
+            return None
+        finally:
+            # Close the database connection
+            conn.close()
+
+    def __get_table_details_with_columns(self):
+        column_details=self.__get_data_dict()
+        top_3=self.__get_top3()
+        # Initialize a structure to hold the combined result
+        result = []
+        table_id = "1"
+        table_name="real_estate"
+        table_desc="""The real_estate table provides detailed information about real estate projects and units, including project details, location, pricing, availability, and construction status. It tracks unit-level attributes such as size, floor, number of bedrooms and bathrooms, and pricing details for beneficiaries and non-beneficiaries. The table also includes metadata like construction completion percentage, payment options, and platform accessibility (web/mobile)."""
+        print("Table Name ::", table_name ,"ID ::",table_id)
+        # Append the table details and its columns to the result
+        result.append({
+            "table_id": table_id,
+            "table_name":table_name,
+            "table_desc": table_desc,
+            "top-3":top_3.to_csv(index=False),
+            "columns": [
+                {
+                    "col_id": column["col_id"],
+                    "col_name": column["column_name"],
+                    "col_type": column['col_dtype'],
+                    "col_desc": column["col_desc"]
+                }
+                for column in column_details
+            ]
+        })
+        
+        return json.dumps(result)
+
+    def get_prompt(self):
+        data_dictionary=self.__get_table_details_with_columns()
+        data_dictionary_prompt = ''
+        for table in json.loads(data_dictionary):
+            data_dictionary_prompt += f"# Table Name:{table['table_name']}\n# Table Description:{table['table_desc']}"
+            data_dictionary_prompt += "\n\n# Columns(with data type and description):\n"
+            for column in table['columns']:
+                data_dictionary_prompt += f"{column['col_name']} ({column['col_type']}) : {column['col_desc']}\n"
+            data_dictionary_prompt += f"""\n/* \n3 rows from {table['table_name']} table:\n"""
+            data_dictionary_prompt+=table['top-3']
+            data_dictionary_prompt += "*/ \n\n"
+        return data_dictionary_prompt
+    
+def Decision_Agent(user_query, language='English', history=None):
+    # if history:
+    prompt = f"""You are an honest, persuasive, and dedicated Real-Estate agent AI conversational assistant at NHC Housing Company. Your task is to continue the ongoing conversation with the user regarding the property selection or recommendation or both.
+    
+    Conversation History: {history}
+    User Query: {user_query}
+    Based on this conversation history (if any) and current user query, you must follow below guidelines strictly:
+    1. Always carefully analyze both the `Conversation History` and the `User Query`. As conversation history may contain the already recommended properties.
+    2. Use context from the Conversation History to avoid redundant information and offer smooth, follow-up answers.
+    3. Always generate **very short**, crisp, precise, polite, generous and real estate professional response. Do not generate lengthy response.
+    
+    YOU MUST GENERATE RESPONSE IN JSON FORMAT AS FOLLOWS:
+    {{"SQL_QUERY": "BOOLEAN YES OR NO | 'YES' if conversation history and current User Query can be transformed to SQL Query else 'NO'",
+      "Response": "Your response to the conversation or initiating the conversation"}}
+
+    THERE GENERATED RESPONSE MUST ALWAYS BE IN JSON AS DESCRIBED ABOVE WITH NO TAGS, EXPLANATION, ETC.
+    
+    """
+    chat_completion = client.chat.completions.create(
+        messages=[{'role': 'system', 'content': f'You are a Real Estate agent who talk in {language} language and helps customer in finding and buying properties in a very professional and polite way.'},
+                {"role": "user", "content": prompt}],
+        model="llama-3.3-70b-versatile", # "llama-3.2-90b-vision-preview",
+        temperature=0,
+        max_tokens=1024,
+    )
+    return chat_completion.choices[0].message.content.strip()
 
 def query_classifier(user_query):
  
@@ -77,7 +213,6 @@ def query_classifier(user_query):
     )
     return chat_completion.choices[0].message.content.strip()
 
-
 def refine_question(history = [],user_query = 'Hi, I am looking for properties in Riyadh region'):
 
     prompt=f"""You are a Real Estate helpful assistant who helps user to recommend best properties based on user property preferences. Your task is to write the final user refined query based on the user conversation history and current user input. 
@@ -93,6 +228,8 @@ def refine_question(history = [],user_query = 'Hi, I am looking for properties i
     user input:{user_query}
     refine query:
     """
+    
+        
     chat_completion = client.chat.completions.create(
         messages=[{'role': 'system', 'content': "You are a Real Estate helpful assistant"},
                 {"role": "user", "content": prompt}],
@@ -101,7 +238,6 @@ def refine_question(history = [],user_query = 'Hi, I am looking for properties i
         max_tokens=1024,
     )
     return chat_completion.choices[0].message.content.strip()
-
 
 class CodeGeneratorAgent:
     def __init__(self, llm):
@@ -178,8 +314,7 @@ class CodeGeneratorAgent:
     
 class CodeExecutorAgent:
     def __init__(self):
-        DATABASE_PATH=os.getenv("DATABASE_PATH")
-        self.db_connection = sqlite3.connect(DATABASE_PATH)
+        self.db_connection = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\real_estate.db")
 
     def execute_sql_query(self, sql_query):
         # try:
@@ -190,31 +325,23 @@ class CodeExecutorAgent:
             print("-------------------recommendation data----------------------------")
             print(result)
             if "project_id" in result.columns:
-                project_id=tuple(result['Apartment_code'].to_list())
-                # sakani_beneficiary_price=max(result['sakani_beneficiary_price'].to_list()), min(result['sakani_beneficiary_price'].to_list())
+                project_id=tuple(result['project_id'].to_list())
                 if str(project_id)[-2]==",":
                     project_id=str(project_id)[:-2]+")"
                 print("-------------------Project ids----------------------------")
                 print(project_id)
-                if len(project_id) > 0:
-                    
-                    project_query=f"select DISTINCT project_id,[Project URL],project_name_eng,project_latitude,project_longitude,bathroom_count,number_of_rooms, sakani_beneficiary_price, apatment_area_meter, Apartment_code from real_estate where Apartment_code in {project_id}"
+                if len(project_id)>0:
+                    project_query=f"select DISTINCT project_id,[Project URL],project_name_eng,project_latitude,project_longitude from real_estate where project_id in {project_id}"
                     cursor = self.db_connection.cursor()
                     cursor.execute(project_query)
                     lat_long_details = cursor.fetchall() 
                     lat_long_details_list=[]
                     for project in lat_long_details:
                         lat_long_details_dict={"project_id":project[0],
-                                               "Project URL":project[1],
-                                               "project_name_eng":project[2],
-                                               "project_latitude":project[3],
-                                               "project_longitude":project[4], 
-                                               "bathroom_count":project[5],
-                                               "number_of_rooms":project[6],
-                                               "sakani_beneficiary_price":project[7],
-                                               "apatment_area_meter":project[8],
-                                               "Apartment_code":project[9]
-                                           }
+                                            "Project URL":project[1],
+                                            "project_name_eng":project[2],
+                                            "project_latitude":project[3],
+                                        "project_longitude":project[4] }
                         lat_long_details_list.append(lat_long_details_dict)
                 else:
                     lat_long_details_list=""
@@ -224,10 +351,9 @@ class CodeExecutorAgent:
             print("--------------------------lat_long_details_dict------------------------")
             print(lat_long_details_list)
             result1=result.to_csv(index=False)
-            # summary = result.describe(include = "all")
-            return result1, lat_long_details_list 
-
-
+            summary = result.describe(include = "all")
+            return result1, lat_long_details_list, summary.to_csv(index=False)
+        
 class InsightGeneratorAgent:
     def __init__(self, llm):
         self.llm = llm
@@ -296,3 +422,156 @@ class InsightGeneratorAgent:
                                  "chat_history": chat_history,
                                  "execution_result": execution_result})
         return response.content.strip()
+
+class Report():
+    def __init__(self, id):
+        self.db_connection = sqlite3.connect(r"C:\Users\rahul\Desktop\Offshore\PubSec-Info-Assistant-Offshore\PubSec-Info-Assistant-Offshore-1\backend\real_estate.db")
+        self.id = id
+    def get_unit_details(self):
+        sql_query=f"Select * from real_estate where apartment_code='{self.id}'"
+        df=pd.read_sql_query(sql_query,self.db_connection)
+        unit_data=df.to_json(orient="records")
+        # print(unit_data)
+        return unit_data
+    
+    def avg_price_similar_apartments(self):
+        unit_data=self.get_unit_details()
+        unit_data=eval(unit_data)
+        region_id_eng=unit_data[0]['region_id_eng']
+        living_area=unit_data[0]['living_area']
+        Apartment_code=unit_data[0]['Apartment_code']
+        # print(region_id_eng)
+        sql_query=f"""
+    SELECT AVG(sakani_beneficiary_price) AS avg_sakani_beneficiary_price ,
+            AVG(non_sakani_beneficiary_price) AS avg_non_sakani_beneficiary_price,
+            AVG(living_area) AS avg_living_area,
+            AVG(number_of_rooms) AS avg_number_of_rooms
+    FROM real_estate  WHERE region_id_eng = '{region_id_eng}' 
+      AND living_area BETWEEN {living_area - 10} AND {living_area + 10}
+
+"""
+        # sql_query=f"select apartment_code,project_name_eng,region_id_eng, sakani_beneficiary_price ,non_sakani_beneficiary_price  from real_estate"
+        df=pd.read_sql_query(sql_query,self.db_connection)
+        
+        unit_price_data=df.to_json(orient="records")
+        return unit_price_data
+    
+    def generate_report(self):
+        
+        selected_apartment = self.get_unit_details()
+        comparison = self.avg_price_similar_apartments()
+
+        prompt=f"""You are a Real Estate helpful assistant who helps user in analysing the results and generate a report.
+        You will be provided with the information of user selected property and information about the average price, average number of rooms and average living area of similar apartments.
+        
+        ```selected property information: {selected_apartment}
+        comparison with similar apartments: {comparison}```
+        
+        Always, generate the report for the user to provide detailed overview on following aspects:
+        1. Bullet points for selected apartment for relevant features like - price, number of rooms, project name, project location(city, district, region), project url, etc.
+        2. Price comparison with similar apartments in percentage.
+        3. Number of rooms comparison with similar apartments (higher or lower). Do Not provide comparison in percetage or fractions.
+        4. Living area comparison with similar apartments in percentage.
+        Also, provide the conclusion based on these results.
+        The Report must not exceed the word limit 100.
+        """
+        
+            
+        chat_completion = client.chat.completions.create(
+            messages=[{'role': 'system', 'content': "You are a Real Estate helpful assistant"},
+                    {"role": "user", "content": prompt}],
+            model="llama-3.2-90b-vision-preview",
+            temperature=0,
+            max_tokens=1024,
+        )
+        return chat_completion.choices[0].message.content.strip()
+        
+
+
+
+
+def assistant_chat():
+    # Streamlit UI
+    st.title("Real Estate Assistant Chat")
+    st.markdown("""A chatbot that processes your queries, generates SQL code, executes it, and provides insights.
+    Type 'exit' to terminate the chat.
+    """)
+
+    # Initialize chat history and default language
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    if "chat_language" not in st.session_state:
+        st.session_state.chat_language = "english"
+
+    # User input
+    user_query = st.text_input("You:", key="user_input")
+
+    if user_query:
+        if user_query.lower() == "exit":
+            st.write("Conversation terminated.")
+            st.stop()
+
+        # Generate response
+        agent = InsightGeneratorAgent(llm=model)
+        response = agent.generate_insight(user_query=user_query, chat_history=st.session_state.chat_history)
+        # response = Decision_Agent(user_query, st.session_state.chat_history)
+
+        # Parse response into dictionary
+        response = ast.literal_eval(response)
+        st.write(f"Bot: {response['Response']}")
+
+        if response['SQL_QUERY'].lower() == "yes":
+            st.write("Processing terminate flow logic...")
+
+            query_type = query_classifier(user_query=user_query)
+            st.write(query_type)
+            refined_user_query = refine_question(user_query=user_query, history=st.session_state.chat_history)
+
+            st.write(f"Refined Query: {refined_user_query}")
+            dict_object = DataDictionaryPrompt()
+            dict_prompt = dict_object.get_prompt()
+            code_generator = CodeGeneratorAgent(llm=model)
+            code_executor = CodeExecutorAgent()
+            # insight_generator = InsightGeneratorAgent(llm=model)
+
+            sql_query = code_generator.generate_sql_query(
+                query=refined_user_query,
+                dict_prompt=dict_prompt,
+                search_based=query_type
+            )
+
+            st.write("Generated SQL Query:")
+            st.code(sql_query, language="sql")
+
+            result = code_executor.execute_sql_query(sql_query=sql_query)
+
+            st.write("--- Execution Results ---")
+            st.write(result[0])
+
+            insights = agent.generate_insight(
+                user_query=user_query, 
+                execution_result=result[0], chat_history=st.session_state.chat_history
+            )
+            insights = ast.literal_eval(insights)
+            response['Response'] = insights['Response']
+            st.write("Insights:")
+            st.write(insights['Response'])
+
+            # # Update the response with insights
+          
+
+        # Update chat history
+        st.session_state.chat_history.append(
+            {"user": user_query, "bot": response['Response']}
+        )
+
+    # Display chat history
+    st.markdown("### Chat History")
+    for entry in st.session_state.chat_history:
+        st.markdown(f"**You:** {entry['user']}")
+        st.markdown(f"**Bot:** {entry['bot']}")
+
+# Run Streamlit app
+if __name__ == "__main__":
+    assistant_chat()

@@ -49,7 +49,7 @@ async def assistant_chat(response:ChatResponse):
     # Generate response
     agent = InsightGeneratorAgent(llm=model)
     response = agent.generate_insight(user_query=user_query, 
-                                    chat_history=chat_history,
+                                    chat_history=chat_history[1:],
                                     chat_language=chat_language)
     # Parse response into dictionary
     response = ast.literal_eval(response)
@@ -90,6 +90,7 @@ async def assistant_chat(response:ChatResponse):
 
         insights = ast.literal_eval(insights)
         response['Response'] = insights['Response']
+        response['lat_long_details_list'] = result[1]
         print("Insights:")
         print(insights['Response'])
 
