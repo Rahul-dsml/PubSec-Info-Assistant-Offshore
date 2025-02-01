@@ -13,7 +13,7 @@ client = Groq(
 )
 
 model = ChatGroq(
-    model="llama-3.2-90b-vision-preview",# "llama-3.3-70b-versatile",
+    model=os.getenv("MODEL_NAME"), #  "llama-3.2-90b-vision-preview",# "llama-3.3-70b-versatile",
     temperature=0.1,
     max_tokens=None,
     timeout=None,
@@ -71,7 +71,7 @@ def query_classifier(user_query):
     chat_completion = client.chat.completions.create(
         messages=[{'role': 'system', 'content': 'You are a text classifier.'},
                 {"role": "user", "content": prompt}],
-        model="llama-3.3-70b-versatile", # "llama-3.2-90b-vision-preview",
+        model=os.getenv("MODEL_NAME"), # "llama-3.2-90b-vision-preview",
         temperature=0,
         max_tokens=1024,
     )
@@ -96,7 +96,7 @@ def refine_question(history = [],user_query = 'Hi, I am looking for properties i
     chat_completion = client.chat.completions.create(
         messages=[{'role': 'system', 'content': "You are a Real Estate helpful assistant"},
                 {"role": "user", "content": prompt}],
-        model="llama-3.2-90b-vision-preview",
+        model= os.getenv("MODEL_NAME"),#  "llama-3.2-90b-vision-preview",
         temperature=0,
         max_tokens=1024,
     )
@@ -124,6 +124,7 @@ class CodeGeneratorAgent:
                         1. Use SQL dialect -> {dialect} when writing SQL queries.
                         2. Review the user's query thoroughly to understand its intent. Carefully verify the table names and their descriptions, ensuring accuracy. Focus only on the relevant columns when constructing the SQL query.
                         3. Always use the wildcard operator `LIKE` for filtering, ensuring all values are transformed to lowercase for consistency. For example, apply filters as `WHERE LOWER(city) LIKE '%pune%'` instead of without converting to lowercase.
+                        4. Always use columns like region, city and district with OR conditions to filter on location.
                         4. Always use `sakani_beneficiary_price` by default unless the user specifies otherwise.
                         5. Always sort the results on price, number of rooms, living area size in DESCENDING ORDER.
                         6. Always filter out the records having any null values.
@@ -255,6 +256,7 @@ class InsightGeneratorAgent:
                         6. Always convert the price in millions SAR.
                         7. Always assume you are a real person and you are in a conversation. Do not give lengthy responses and too many follow up questions.
                         8. ALWAYS STICK TO THE INFORMATION PROVIDED IN Current Information or conversation history.
+                        9. If `Current Information` is empty, ask follow up questions along with a message like `Sorry, I didn't found any results!`
                         
                         YOU MUST GENERATE RESPONSE IN JSON FORMAT AS FOLLOWS:
                         {{"SQL_QUERY": "BOOLEAN YES OR NO | 'YES' if conversation history and current User Query can be transformed to SQL Query else 'NO'",

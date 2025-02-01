@@ -19,7 +19,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 load_dotenv()
 
 model = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model=os.getenv("MODEL_NAME"),
     temperature=0.1,
     max_tokens=None,
     timeout=None,
