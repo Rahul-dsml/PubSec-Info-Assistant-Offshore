@@ -4,6 +4,7 @@ import pandas as pd
 from groq import Groq
 from pydantic import BaseModel, Field
 from typing import Any
+import ast
 
 
 
@@ -91,6 +92,10 @@ class Report():
             temperature=0,
             max_tokens=1024,
         )
-        return chat_completion.choices[0].message.content.strip()
+        
+        response = chat_completion.choices[0].message.content.strip()
+        response = response[response.find("{"):response.find("}")+1]
+        response = ast.literal_eval(response)
+        return response
 
         
