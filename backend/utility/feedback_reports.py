@@ -59,17 +59,16 @@ class Report():
         prompt=f"""You are a Real Estate helpful assistant who helps user in analysing the results and generate a report.
         You will be provided with the information of user selected property and information about the average price, average number of rooms and average living area of similar apartments.
         
-        
-selected property information: {selected_apartment}
-        comparison with similar apartments: {comparison}
-
-        
+        user selected property information: {selected_apartment}
+        comparison with similar property: {comparison}
+    
         Always, generate the report in MARKDOWN format for the user to provide detailed overview on following aspects:
         1. Bullet points for selected apartment for relevant features like - price, number of rooms, project name, project location(city, district, region), project url, etc.
         2. Price comparison with similar apartments in percentage.
         3. Number of rooms comparison with similar apartments (higher or lower). Do Not provide comparison in percentage or fractions.
         4. Living area comparison with similar apartments in percentage.
         5. Conclusion for summary of comparison and convincing the user as a Real Estate Agent.
+        6. Always recommend best 3 suitable properties considering the properties selected by the user including the project name, apartment_code, project url, price, number of rooms, project location(city, district, region) etc.
         Also, provide the conclusion based on these results.
         The Report must not exceed the word limit 500 and MUST BE IN MARKDOWN FORMAT.
         """

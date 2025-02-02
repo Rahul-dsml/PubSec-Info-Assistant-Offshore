@@ -45,7 +45,8 @@ async def assistant_chat(response:ChatResponse):
     print("------------------------------------------------------------")
     print(chat_history)
     print("-----------------------------------------------------------")
-
+    print("chat_language ::",chat_language)
+    
     # Generate response
     agent = InsightGeneratorAgent(llm=model)
     response = agent.generate_insight(user_query=user_query, 
@@ -81,7 +82,7 @@ async def assistant_chat(response:ChatResponse):
 
         print("--- Execution Results ---")
         print(result[0])
-
+        
         insights = agent.generate_insight(
             user_query=user_query, 
             execution_result=result[0], 
