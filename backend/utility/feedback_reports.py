@@ -19,7 +19,8 @@ client = Groq(
 
 class Report():
     def __init__(self, id):
-        self.db_connection = sqlite3.connect(os.getenv("database_path"))
+        path = os.getenv("DATABASE_PATH")
+        self.db_connection = sqlite3.connect(path)
         self.id = id
 
     def get_unit_details(self):
@@ -69,8 +70,17 @@ class Report():
         4. Living area comparison with similar apartments in percentage.
         5. Conclusion for summary of comparison and convincing the user as a Real Estate Agent.
         6. Always recommend best 3 suitable properties considering the properties selected by the user including the project name, apartment_code, project url, price, number of rooms, project location(city, district, region) etc.
+        7. NEVER RECOMMEND THE ALREADY SELECTED APARTMENT IN THE RECOMMENDATIONS.
         Also, provide the conclusion based on these results.
         The Report must not exceed the word limit 500 and MUST BE IN MARKDOWN FORMAT.
+        
+        The output must be in JSON FORMAT as below:
+        {{"Current_apartment_details": "Information regarding current apartment",
+          "Comparison": "Price, Number of Rooms, and Area comparison with similar apartments",
+          "Summary": "Summary of the comparisons",
+          "Recommendations": "Agent recommending Top 3 suitable Recommendations from the similar properties excluding current apartment"}}
+          
+        THE OUTPUT MUST BE STRICTLY JSON AS DESCRIBED ABOVE, WITHOUT ANY ADDITIONAL TEXT OR TAGS.
         """
         
             
