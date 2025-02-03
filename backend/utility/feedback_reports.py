@@ -65,17 +65,19 @@ class Report():
         sql_query = f"""
     SELECT *
     FROM real_estate  WHERE region_id_eng = '{region_id_eng}' 
-      AND living_area BETWEEN {living_area - 10} AND {living_area + 10}
-      AND sakani_beneficiary_price BETWEEN {price - 0.1*price} AND {price + 0.1*price}
-      AND number_of_rooms BETWEEN {rooms - 2} AND {rooms + 2}
-      AND Apartment_code <> {Apartment_code}
+      AND living_area BETWEEN {living_area - 100} AND {living_area + 100}
+      AND sakani_beneficiary_price BETWEEN {price - 0.5*price} AND {price + 0.5*price}
+      AND number_of_rooms BETWEEN {rooms - 3.0} AND {rooms + 3.0}
+      AND Apartment_code != '{Apartment_code}'
       ORDER BY living_area DESC, number_of_rooms DESC, sakani_beneficiary_price ASC
+      LIMIT 5
 
 
 """
         # sql_query=f"select apartment_code,project_name_eng,region_id_eng, sakani_beneficiary_price ,non_sakani_beneficiary_price  from real_estate"
         df=pd.read_sql_query(sql_query,self.db_connection)
-        
+        print(sql_query)
+        print(df)
         similar_prop = df.to_json(orient="records")
         return similar_prop
     
@@ -84,7 +86,9 @@ class Report():
         selected_apartment = self.get_unit_details()
         comparison = self.avg_price_similar_apartments()
         similar_properties= self.similar_apartments()
-
+        print("Apartment details: ", selected_apartment)
+        print("comparison: ", comparison)
+        print("recommendations ", similar_properties )
         prompt=f"""You are a Real Estate helpful assistant who helps user in analysing the results and generate a report.
         You will be provided with the information of user selected property, information about the average price, average number of rooms and average living area of similar apartments and information about similar properties.
         
@@ -99,7 +103,7 @@ class Report():
         4. Living area comparison with similar apartments in percentage.
         5. Conclusion for summary of comparison and convincing the user as a Real Estate Agent.
         6. Always recommend best 3 suitable properties considering the properties selected by the user including the project name, apartment_code, project url, price, number of rooms, project location(city, district, region) etc.
-        7. NEVER RECOMMEND THE ALREADY SELECTED APARTMENT IN THE RECOMMENDATIONS.
+        7. If `similar properties` is empty, give recommendations as `Not Available`.
         Also, provide the conclusion based on these results.
         The Report must not exceed the word limit 500 and MUST BE IN MARKDOWN FORMAT.
         
@@ -107,7 +111,8 @@ class Report():
         {{"Current_apartment_details": "Information regarding current apartment",
           "Comparison": "Price, Number of Rooms, and Area comparison with similar apartments",
           "Summary": "Summary of the comparisons",
-          "Recommendations": "Agent recommending Top 3 suitable Recommendations strictly from the similar properties convincing the user to consider."}}
+          "Recommendations": "Agent recommending Top 3 suitable Recommendations in MARKDOWN FORMAT BULLET POINTS strictly from the `similar properties` convincing the user to consider.",
+          "Recommendations_response": "Explain the recommedations in short and crisp points focussing on relevant information such as price, number of rooms and living area."}}
           
         THE OUTPUT MUST BE STRICTLY JSON AS DESCRIBED ABOVE, WITHOUT ANY ADDITIONAL TEXT OR TAGS.
         """
