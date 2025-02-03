@@ -69,7 +69,7 @@ class Report():
       AND sakani_beneficiary_price BETWEEN {price - 0.1*price} AND {price + 0.1*price}
       AND number_of_rooms BETWEEN {rooms - 2} AND {rooms + 2}
       AND Apartment_code <> {Apartment_code}
-    SORT BY living_area DESC, number_of_rooms DESC, sakani_beneficiary_price ASC
+    order by living_area DESC, number_of_rooms DESC, sakani_beneficiary_price ASC
 
 """
         # sql_query=f"select apartment_code,project_name_eng,region_id_eng, sakani_beneficiary_price ,non_sakani_beneficiary_price  from real_estate"
