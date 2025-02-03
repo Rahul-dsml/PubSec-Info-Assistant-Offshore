@@ -123,6 +123,8 @@ class Report():
         response = chat_completion.choices[0].message.content.strip()
         response = response[response.find("{"):response.find("}")+1]
         response = ast.literal_eval(response)
+        print("-------------------------Feedback Report------------------------")
+        print(response)
         return response
 
         
