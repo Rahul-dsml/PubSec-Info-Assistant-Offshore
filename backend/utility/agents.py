@@ -153,6 +153,7 @@ class CodeGeneratorAgent:
                         3. Use the following calculation details to interpret user queries and construct SQL queries:
                         - **Purchasing Power**: Calculate financial capacity using the formula:
                             Purchasing Power (units per million) = 1.8 / (Salary × 0.65 × 240)
+                            The filter for price must be ```price <= 1/(Purchasing Power)```
                         - **Family Size**: For housing size recommendations, every two individuals require at least one room.
                             Example: A family of 4 requires a minimum of 2 rooms, while a family of 5 requires at least 3 rooms.
                         4. Always dynamically incorporate the derived constraints from calculations (e.g., purchasing power and minimum room requirements) into the SQL query.

@@ -53,16 +53,43 @@ class Report():
         unit_price_data=df.to_json(orient="records")
         return unit_price_data
     
+    def similar_apartments(self):
+        unit_data = self.get_unit_details()
+        unit_data = eval(unit_data)
+        region_id_eng = unit_data[0]['region_id_eng']
+        living_area = unit_data[0]['living_area']
+        price = unit_data[0]['sakani_beneficiary_price']
+        rooms = unit_data[0]['number_of_rooms']
+        Apartment_code = unit_data[0]['Apartment_code']
+        # print(region_id_eng)
+        sql_query = f"""
+    SELECT *
+    FROM real_estate  WHERE region_id_eng = '{region_id_eng}' 
+      AND living_area BETWEEN {living_area - 10} AND {living_area + 10}
+      AND sakani_beneficiary_price BETWEEN {price - 0.1*price} AND {price + 0.1*price}
+      AND number_of_rooms BETWEEN {rooms - 2} AND {rooms + 2}
+      AND Apartment_code <> {Apartment_code}
+    SORT BY living_area DESC, number_of_rooms DESC, sakani_beneficiary_price ASC
+
+"""
+        # sql_query=f"select apartment_code,project_name_eng,region_id_eng, sakani_beneficiary_price ,non_sakani_beneficiary_price  from real_estate"
+        df=pd.read_sql_query(sql_query,self.db_connection)
+        
+        similar_prop = df.to_json(orient="records")
+        return similar_prop
+    
     def generate_report(self):
         
         selected_apartment = self.get_unit_details()
         comparison = self.avg_price_similar_apartments()
+        similar_properties= self.similar_apartments()
 
         prompt=f"""You are a Real Estate helpful assistant who helps user in analysing the results and generate a report.
-        You will be provided with the information of user selected property and information about the average price, average number of rooms and average living area of similar apartments.
+        You will be provided with the information of user selected property, information about the average price, average number of rooms and average living area of similar apartments and information about similar properties.
         
         user selected property information: {selected_apartment}
         comparison with similar property: {comparison}
+        similar properties: {similar_properties}
     
         Always, generate the report in MARKDOWN format for the user to provide detailed overview on following aspects:
         1. Bullet points for selected apartment for relevant features like - price, number of rooms, project name, project location(city, district, region), project url, etc.
@@ -79,7 +106,7 @@ class Report():
         {{"Current_apartment_details": "Information regarding current apartment",
           "Comparison": "Price, Number of Rooms, and Area comparison with similar apartments",
           "Summary": "Summary of the comparisons",
-          "Recommendations": "Agent recommending Top 3 suitable Recommendations from the similar properties excluding current apartment"}}
+          "Recommendations": "Agent recommending Top 3 suitable Recommendations strictly from the similar properties convincing the user to consider."}}
           
         THE OUTPUT MUST BE STRICTLY JSON AS DESCRIBED ABOVE, WITHOUT ANY ADDITIONAL TEXT OR TAGS.
         """
