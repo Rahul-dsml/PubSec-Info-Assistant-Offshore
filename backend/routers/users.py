@@ -100,6 +100,7 @@ async def assistant_chat(response:ChatResponse):
 @router.post("/get_details/")
 async def get_details(response:GetDetails):
     apartment_id=response.apartment_id
+    language = response.language
     report_obj=Report(apartment_id)
-    response=report_obj.generate_report()
+    response=report_obj.generate_report(language=language)
     return JSONResponse(content=response, status_code=200)

@@ -81,15 +81,16 @@ class Report():
         similar_prop = df.to_json(orient="records")
         return similar_prop
     
-    def generate_report(self):
-        
+    def generate_report(self, language = 'english'):
+        language= language.upper()
+        print("***********************\n", language)
         selected_apartment = self.get_unit_details()
         comparison = self.avg_price_similar_apartments()
         similar_properties= self.similar_apartments()
         print("Apartment details: ", selected_apartment)
         print("comparison: ", comparison)
         print("recommendations ", similar_properties )
-        prompt=f"""You are a Real Estate helpful assistant who helps user in analysing the results and generate a report.
+        prompt=f'''You are a Real Estate helpful assistant with {language} native language who helps user in analysing the results and generate a report.
         You will be provided with the information of user selected property, information about the average price, average number of rooms and average living area of similar apartments and information about similar properties.
         
         user selected property information: {selected_apartment}
@@ -104,18 +105,19 @@ class Report():
         5. Conclusion for summary of comparison and convincing the user as a Real Estate Agent.
         6. Always recommend best 3 suitable properties considering the properties selected by the user including the project name, apartment_code, project url, price, number of rooms, project location(city, district, region) etc.
         7. If `similar properties` is empty, give recommendations as `Not Available`.
+        
         Also, provide the conclusion based on these results.
         The Report must not exceed the word limit 500 and MUST BE IN MARKDOWN FORMAT.
         
-        The output must be in JSON FORMAT as below:
-        {{"Current_apartment_details": "Information regarding current apartment",
-          "Comparison": "Price, Number of Rooms, and Area comparison with similar apartments",
-          "Summary": "Summary of the comparisons",
-          "Recommendations": "Agent recommending Top 3 suitable Recommendations in MARKDOWN FORMAT BULLET POINTS strictly from the `similar properties` convincing the user to consider.",
-          "Recommendations_response": "Explain the recommedations in short and crisp points focussing on relevant information such as price, number of rooms and living area."}}
+        The output must be in JSON FORMAT sith keys always in 'ENGLISH' and information in the values must be in {language} as below:
+        {{"Current_apartment_details": """Information regarding current apartment""",
+          "Comparison": """Price, Number of Rooms, and Area comparison with similar apartments""",
+          "Summary": """Summary of the comparisons""",
+          "Recommendations": """Top 3 suitable Recommendations in BULLET POINTS FORMAT strictly from the `similar properties`.""",
+          "Recommendations_response": """Explain the recommedations in short and crisp points focussing on relevant information such as price, number of rooms and living area."""}}
           
         THE OUTPUT MUST BE STRICTLY JSON AS DESCRIBED ABOVE, WITHOUT ANY ADDITIONAL TEXT OR TAGS.
-        """
+        '''
         
             
         chat_completion = client.chat.completions.create(
@@ -128,7 +130,12 @@ class Report():
         
         response = chat_completion.choices[0].message.content.strip()
         response = response[response.find("{"):response.find("}")+1]
-        response = ast.literal_eval(response)
+        print("**********TTEESSTTING**********")
+        print(response)
+        try:
+            response = ast.literal_eval(response)
+        except:
+            response = eval(response)
         print("-------------------------Feedback Report------------------------")
         print(response)
         return response
