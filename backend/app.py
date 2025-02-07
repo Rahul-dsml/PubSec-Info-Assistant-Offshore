@@ -9,10 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Allow specific frontend URL
-origins = [
-    "https://realestateassistantfrontend.vercel.app",  # Your frontend
-    "http://localhost:8000",  # Allow local testing
-]
+# origins = [
+#     # "https://realestateassistantfrontend.vercel.app",  # Your frontend
+#     # "http://localhost:3000",  # Allow local testing
+# ]
 
 # @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,10 +27,10 @@ app = FastAPI(lifespan=lifespan)
 # CORS setup
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=origins,
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],
+	allow_origins=["*"],
 )
 
 # Routers

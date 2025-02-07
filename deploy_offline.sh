@@ -1,40 +1,51 @@
 #!/bin/bash
 
-# Define image names
-BACKEND_IMAGE="backend-offline:latest"
-FRONTEND_IMAGE="frontend-offline:latest"
+# Load environment variables from .env file
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
-# Load the Docker images
-echo "📂 Loading Docker images..."
-docker load -i backend.tar
-docker load -i frontend.tar
+# Define image names from Docker Hub
+BACKEND_IMAGE="purshotamsingh/backend:v2"
+FRONTEND_IMAGE="sanki1998/real_estate:v2"
+
+# Pull the Docker images
+echo "📂 Pulling Docker images..."
+docker pull $BACKEND_IMAGE
+docker pull $FRONTEND_IMAGE
 
 # Create docker-compose.yml for the client
 echo "📝 Generating docker-compose.yml..."
 cat <<EOF > docker-compose.yml
 version: "3.8"
 services:
-
   backend:
     image: $BACKEND_IMAGE
     ports:
       - "8050:8050"
     restart: always
+    command: uvicorn app:app --host 0.0.0.0 --port 8050
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MODEL_NAME=${MODEL_NAME}
+      - DATABASE_PATH=${DATABASE_PATH}
+      - CSV_FILE_PATH=${CSV_FILE_PATH}
+      - EXCEL_FILE_PATH=${EXCEL_FILE_PATH}
 
   frontend:
-    ports:
     image: $FRONTEND_IMAGE
+    ports:
       - "3000:80"
     depends_on:
       - backend
     restart: always
 EOF
 
-echo "✅ Docker images saved: backend.tar, frontend.tar"
-echo "📤 Please send backend.tar, frontend.tar, and docker-compose.yml to the client."
+echo "✅ Docker images pulled successfully."
+echo "📤 Please send docker-compose.yml to the client."
 
 # Run docker-compose
+docker-compose --env-file .env up -d
 echo "🚀 Starting containers..."
-docker-compose up -d
 
 echo "✅ Application is now running! Access frontend at http://localhost:3000"

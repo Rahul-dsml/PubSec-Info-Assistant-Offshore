@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  backend:
+    image: purshotamsingh/backend:v2
+    ports:
+      - "8050:8050"
+    restart: always
+    command: uvicorn app:app --host 0.0.0.0 --port 8050
+    environment:
+      - GROQ_API_KEY=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
+      - MODEL_NAME=llama-3.3-70b-versatile
+      - DATABASE_PATH=real_estate.db
+      - CSV_FILE_PATH=df_english_v2.csv
+      - EXCEL_FILE_PATH=Data_Dictionary_v2.xlsx
+
+  frontend:
+    image: sanki1998/real_estate:v2
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
