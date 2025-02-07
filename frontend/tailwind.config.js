@@ -15,7 +15,8 @@ export default {
 	  },
 	  extend: {
 		fontFamily: {
-			heading: ['Poppins', 'sans-serif'], // Replace 'Roboto' with your chosen font
+			heading: ['Poppins', 'sans-serif'],
+			arabicHeading:[ "Noto Kufi Arabic", "serif"] // Replace 'Roboto' with your chosen font
 		  },
 		colors: {
 		  border: "hsl(var(--border))",

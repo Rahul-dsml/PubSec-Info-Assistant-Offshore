@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@100..900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -87,6 +88,26 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;
   }
+
+  .textarea {
+    scrollbar-width: none; /* For Firefox */
+    -ms-overflow-style: none; /* For Internet Explorer and Edge */
+  }
+  
+  .textarea::-webkit-scrollbar {
+    display: none; /* For Chrome, Safari, and Opera */
+  }
+
+  .remove-scrollbar{
+    scrollbar-width: none; /* For Firefox */
+    -ms-overflow-style: none; /* For Internet Explorer and Edge */
+  }
+  .remove-scrollbar::-webkit-scrollbar{
+    .chatContainer::-webkit-scrollbar{
+      display: none;
+    }
+  }
+
 }
 
 @keyframes gradient-flow {

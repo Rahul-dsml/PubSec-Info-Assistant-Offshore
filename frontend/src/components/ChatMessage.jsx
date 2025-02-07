@@ -4,9 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import user from "@/assets/user.png";
 import bot from "@/assets/bot.png";
 import ReactMarkdown from "react-markdown";
+import useAppStore from "@/state/zustand";
+import CardsContainer from "./CardsContainer";
 // import remarkGfm from "remark-gfm"; // For GitHub-style markdown like tables, checkboxes, etc.
 
 export default function ChatMessage({ message, isUser, isLoading }) {
+  // const {latLongDetails} = useAppStore()
   return (
     <motion.div
       initial={{ opacity: 0, x: isUser ? 100 : -100 }}
@@ -29,6 +32,7 @@ export default function ChatMessage({ message, isUser, isLoading }) {
          <Skeleton className="h-4 w-80 rounded-full bg-white" />
        </div>
       ) : (
+        <>
         <motion.div
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
@@ -53,7 +57,11 @@ export default function ChatMessage({ message, isUser, isLoading }) {
               li: ({ children }) => <li className="mb-1">{children}</li>,
             }}
           />
+        {/* {latLongDetails?.length>1 && <CardsContainer/>} */}
+          
+
         </motion.div>
+        </>
       )}
     </motion.div>
   );

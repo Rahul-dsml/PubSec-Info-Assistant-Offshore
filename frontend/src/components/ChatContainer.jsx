@@ -2,10 +2,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatMessage from "./ChatMessage";
 import { useEffect, useRef } from "react";
 import RecommenderComponent from "./RecommenderComponent";
+import CardsContainer from "./CardsContainer";
+import useAppStore from "@/state/zustand";
 
-export default function ChatContainer({ messages }) {
+export default function ChatContainer({ messages,handleSend }) {
   const scrollRef = useRef(null);
-
+  const {latLongDetails,showRecommendationCards} = useAppStore()
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
@@ -17,8 +19,6 @@ export default function ChatContainer({ messages }) {
 
   return (
 
-    <section className="chat" >
-
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -28,10 +28,10 @@ export default function ChatContainer({ messages }) {
     >
       <AnimatePresence>
         {messages.map((msg, index) => (
-          <ChatMessage key={index} message={msg.text} isUser={msg.isUser}  isLoading={msg.isLoading} />
+          <ChatMessage key={index} message={msg.text} isUser={msg.isUser} isLoading={msg.isLoading} />
         ))}
+        {/* {latLongDetails?.length>1 && showRecommendationCards && <CardsContainer handleSend={handleSend} />} */}
       </AnimatePresence>
     </motion.div>
-    </section>
   );
 } 
